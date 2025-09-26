@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Heer Embroidery - Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-6 text-center">🛠 Heer Embroidery - Admin Panel</h1>
+
+    <!-- 🔑 Admin Token Section -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <h2 class="text-xl font-semibold mb-2">🔑 Set Admin Token</h2>
+      <div class="flex gap-2">
+        <input id="adminTokenInput" type="text" placeholder="Enter admin token"
+               class="border p-2 rounded w-full">
+        <button id="setTokenBtn"
+                class="bg-blue-600 text-white px-4 py-2 rounded">Save Token</button>
+      </div>
+    </div>
+
+    <!-- 📦 Upload Product Section -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <h2 class="text-xl font-semibold mb-2">📦 Add New Product</h2>
+      <form id="productForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
+        <input type="text" id="prodName" placeholder="Product Name" class="border p-2 rounded" required>
+        <input type="number" id="prodPrice" placeholder="Price" class="border p-2 rounded" required>
+
+        <!-- Dropdown for category -->
+        <select id="prodCategory" class="border p-2 rounded">
+          <option value="Embroidery">Embroidery</option>
+          <option value="Bouquet">Bouquet</option>
+          <option value="Shirts & T-Shirts">Shirts & T-Shirts</option>
+          <option value="Handkerchiefs">Handkerchiefs</option>
+          <option value="Suits">Suits</option>
+        </select>
+
+        <!-- File upload for image -->
+        <input type="file" id="prodImage" class="border p-2 rounded" accept="image/*">
+
+        <textarea id="prodDesc" placeholder="Product Description" class="border p-2 rounded col-span-2"></textarea>
+        <button type="submit"
+                class="bg-green-600 text-white px-4 py-2 rounded col-span-2">➕ Add Product</button>
+      </form>
+    </div>
+    
+    <!-- Product List for Edit/Delete -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <h2 class="text-xl font-semibold mb-2">📦 Manage Products</h2>
+      <div id="productsContainer"></div>
+    </div>
+
+    <!-- 📑 Orders Table -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-xl font-semibold mb-2">📑 Orders</h2>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Order ID</th>
+            <th class="p-2 border">Customer</th>
+            <th class="p-2 border">Address</th>
+            <th class="p-2 border">Items</th>
+            <th class="p-2 border">Date</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
