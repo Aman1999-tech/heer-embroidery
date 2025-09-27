@@ -1,18 +1,29 @@
 // =======================
+// FIREBASE CONFIGURATION
+// =======================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+// Replace with your Firebase config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// =======================
 // GET PRODUCT FROM URL
 // =======================
 const urlParams = new URLSearchParams(window.location.search);
-const productId = parseInt(urlParams.get("id"));
+const productId = urlParams.get("id");
 
-// Example products (replace with backend fetch if needed)
-let products = [
-  { id: 1, name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
-  { id: 2, name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
-  { id: 3, name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
-];
-
-const product = products.find(p => p.id === productId);
-if (!product) {
+if (!productId) {
   alert("Product not found");
   window.location.href = "index.html";
 }
@@ -34,15 +45,6 @@ const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
 const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
-
-// =======================
-// LOAD PRODUCT DATA
-// =======================
-productImg.src = product.img;
-productImg.alt = product.name;
-productName.textContent = product.name;
-productPrice.textContent = `₹${product.price}`;
-productDesc.textContent = product.description;
 
 // =======================
 // CART & WISHLIST STORAGE
@@ -173,20 +175,38 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =======================
-// BUTTON ACTIONS
+// LOAD PRODUCT FROM FIREBASE
 // =======================
-addCartBtn.addEventListener("click", () => addToCart(product));
-addWishlistBtn.addEventListener("click", () => addToWishlist(product));
+async function loadProduct() {
+  const productRef = doc(db, "products", productId);
+  const productSnap = await getDoc(productRef);
+
+  if (productSnap.exists()) {
+    const product = productSnap.data();
+
+    productImg.src = product.img;
+    productImg.alt = product.name;
+    productName.textContent = product.name;
+    productPrice.textContent = `₹${product.price}`;
+    productDesc.textContent = product.description;
+
+    addCartBtn.onclick = () => addToCart({ id: productId, ...product });
+    addWishlistBtn.onclick = () => addToWishlist({ id: productId, ...product });
+  } else {
+    alert("Product not found");
+    window.location.href = "index.html";
+  }
+}
 
 // =======================
-// INITIAL LOAD
+// BUTTON ACTIONS & INITIAL LOAD
 // =======================
-document.addEventListener("DOMContentLoaded", ()=> {
+document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
-  const backShopBtn = document.getElementById("backShopBtn");
-backShopBtn.addEventListener("click", () => {
-  window.location.href = "index.html";
-});
 
+  const backShopBtn = document.getElementById("backShopBtn");
+  backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+
+  loadProduct(); // Load product from Firebase
 });
