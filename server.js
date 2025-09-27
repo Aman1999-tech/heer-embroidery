@@ -1,146 +1,195 @@
-const express = require("express");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
-const admin = require("firebase-admin");
-require("dotenv").config();
+// =======================
+// GET PRODUCT FROM URL
+// =======================
+const urlParams = new URLSearchParams(window.location.search);
+const productId = urlParams.get("id"); // keep as string to match Firebase IDs
 
-const app = express();
-app.use(express.json());
-app.use(express.static(__dirname));
+// =======================
+// HARDCODED PRODUCTS
+// =======================
+let products = [
+  { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
+  { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
+  { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
+];
 
-// -------------------- RAZORPAY SETUP --------------------
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// =======================
+// DOM ELEMENTS
+// =======================
+const productImg = document.getElementById("productImg");
+const productName = document.getElementById("productName");
+const productPrice = document.getElementById("productPrice");
+const productDesc = document.getElementById("productDesc");
+const addCartBtn = document.getElementById("addCartBtn");
+const addWishlistBtn = document.getElementById("addWishlistBtn");
 
-// -------------------- FIREBASE SETUP --------------------
-const serviceAccount = require("./firebase-key.json");
+const cartDrawer = document.getElementById("cartDrawer");
+const wishlistDrawer = document.getElementById("wishlistDrawer");
+const cartItems = document.getElementById("cartItems");
+const wishlistItems = document.getElementById("wishlistItems");
+const cartCount = document.getElementById("cartCount");
+const wishlistCount = document.getElementById("wishlistCount");
+const cartTotal = document.getElementById("cartTotal");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// =======================
+// CART & WISHLIST STORAGE
+// =======================
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 
-const db = admin.firestore();
-const productsRef = db.collection("products");
-const ordersRef = db.collection("orders");
+function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
+function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
-// -------------------- ADMIN TOKEN --------------------
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "mysecrettoken";
+// =======================
+// CART FUNCTIONS
+// =======================
+function renderCart() {
+  cartItems.innerHTML = "";
+  let total = 0;
+  cart.forEach(item => {
+    total += item.price * item.quantity;
+    const div = document.createElement("div");
+    div.className = "flex justify-between items-center mb-3 border-b pb-2";
+    div.innerHTML = `
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
+      <div class="flex-1 ml-2">
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price*item.quantity}</p>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <button class="bg-gray-300 px-2 rounded increase">+</button>
+        <span>${item.quantity}</span>
+        <button class="bg-gray-300 px-2 rounded decrease">-</button>
+      </div>
+    `;
+    div.querySelector(".increase").addEventListener("click", () => updateCartQuantity(item.id, "increase"));
+    div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
+    cartItems.appendChild(div);
+  });
+  cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0);
+  cartTotal.textContent = `₹${total}`;
+  saveCart();
+}
 
-// -------------------- RAZORPAY ROUTES --------------------
+function addToCart(product) {
+  const existing = cart.find(i => i.id === product.id);
+  if (existing) existing.quantity++;
+  else cart.push({...product, quantity:1});
+  wishlist = wishlist.filter(i => i.id !== product.id);
+  saveWishlist();
+  renderWishlist();
+  renderCart();
+}
 
-// Create Razorpay order
-app.post("/create-order", async (req, res) => {
-  try {
-    const { amount } = req.body;
-    const order = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
-      currency: "INR",
-      receipt: "rcpt_" + Date.now()
-    });
-    res.json({ ...order, key: process.env.RAZORPAY_KEY_ID });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create order" });
-  }
-});
-
-// Verify Razorpay payment
-app.post("/verify-order", async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderData } = req.body;
-    const h = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
-    h.update(razorpay_order_id + "|" + razorpay_payment_id);
-    const valid = h.digest("hex") === razorpay_signature;
-    if (valid) {
-      const newOrder = { orderId: razorpay_order_id, paymentId: razorpay_payment_id, customer: orderData, date: new Date().toISOString() };
-      await ordersRef.add(newOrder);
-      res.json({ success: true });
-    } else {
-      res.json({ success: false });
+function updateCartQuantity(id, action) {
+  cart = cart.map(item => {
+    if(item.id === id) {
+      if(action === "increase") item.quantity++;
+      if(action === "decrease") item.quantity--;
     }
-  } catch (e) {
-    console.error(e);
-    res.json({ success: false });
-  }
+    return item;
+  }).filter(i => i.quantity > 0);
+  renderCart();
+}
+
+// =======================
+// WISHLIST FUNCTIONS
+// =======================
+function renderWishlist() {
+  wishlistItems.innerHTML = "";
+  wishlist.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "flex justify-between items-center mb-3 border-b pb-2";
+    div.innerHTML = `
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
+      <div class="flex-1 ml-2">
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-sm text-gray-600">₹${item.price}</p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <button class="bg-green-600 text-white px-2 rounded moveCart">Move to Cart</button>
+        <button class="bg-red-500 text-white px-2 rounded removeWishlist">Remove</button>
+      </div>
+    `;
+    div.querySelector(".moveCart").addEventListener("click", () => addToCart(item));
+    div.querySelector(".removeWishlist").addEventListener("click", () => removeFromWishlist(item.id));
+    wishlistItems.appendChild(div);
+  });
+  wishlistCount.textContent = wishlist.length;
+  saveWishlist();
+}
+
+function addToWishlist(product){
+  if(!wishlist.find(i => i.id === product.id)) wishlist.push(product);
+  renderWishlist();
+}
+
+function removeFromWishlist(id){
+  wishlist = wishlist.filter(i => i.id !== id);
+  renderWishlist();
+}
+
+// =======================
+// DRAWER TOGGLES
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
+  const cartBtn = document.getElementById("cartBtn");
+  const wishlistBtn = document.getElementById("wishlistBtn");
+  const closeCartBtn = document.querySelector(".closeCart");
+  const closeWishlistBtn = document.querySelector(".closeWishlist");
+
+  cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
+  closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
+  wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
+  closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
 });
 
-// -------------------- PRODUCTS ROUTES --------------------
+// =======================
+// LOAD PRODUCT (HARDCODE + FIREBASE)
+// =======================
+async function loadProduct() {
+  let allProducts = [...products]; // start with hardcoded
 
-// Get all products
-app.get("/products", async (req, res) => {
+  // Fetch Firebase products from server endpoint
   try {
-    const snapshot = await productsRef.get();
-    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json(products);
+    const res = await fetch("/products");
+    if (res.ok) {
+      const firebaseProducts = await res.json();
+      allProducts = allProducts.concat(firebaseProducts);
+    }
   } catch (err) {
-    res.status(500).json({ error: "Failed to load products" });
+    console.error("Failed to fetch Firebase products:", err);
   }
-});
 
-// Add new product
-app.post("/products", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-  try {
-    const newProduct = req.body;
-    const docRef = await productsRef.add(newProduct);
-    res.status(201).json({ id: docRef.id, ...newProduct });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to add product" });
+  // Find the product by id
+  const product = allProducts.find(p => p.id == productId);
+  if (!product) {
+    alert("Product not found");
+    window.location.href = "index.html";
+    return;
   }
+
+  // Load product details
+  productImg.src = product.img;
+  productImg.alt = product.name;
+  productName.textContent = product.name;
+  productPrice.textContent = `₹${product.price}`;
+  productDesc.textContent = product.description;
+
+  // Update cart/wishlist buttons
+  addCartBtn.onclick = () => addToCart(product);
+  addWishlistBtn.onclick = () => addToWishlist(product);
+}
+
+// =======================
+// INITIAL LOAD
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
+  renderCart();
+  renderWishlist();
+
+  const backShopBtn = document.getElementById("backShopBtn");
+  backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+
+  loadProduct(); // load product (hardcoded + Firebase)
 });
-
-// Update product
-app.put("/products/:id", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-  try {
-    await productsRef.doc(req.params.id).update(req.body);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to update product" });
-  }
-});
-
-// Delete product
-app.delete("/products/:id", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-  try {
-    await productsRef.doc(req.params.id).delete();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to delete product" });
-  }
-});
-
-// -------------------- ORDERS ROUTES --------------------
-
-// Get all orders
-app.get("/orders", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-  try {
-    const snapshot = await ordersRef.get();
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to load orders" });
-  }
-});
-
-// Add order (if needed separately)
-app.post("/orders", async (req, res) => {
-  try {
-    const newOrder = { ...req.body, date: new Date() };
-    const docRef = await ordersRef.add(newOrder);
-    res.json({ id: docRef.id, ...newOrder });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to add order" });
-  }
-});
-
-// -------------------- START SERVER --------------------
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));

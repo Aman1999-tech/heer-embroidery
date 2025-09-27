@@ -1,15 +1,8 @@
 // =======================
-// GET PRODUCT FROM URL
+// GET PRODUCT ID FROM URL
 // =======================
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id"); // keep as string to match Firebase IDs
-
-// Example products (hardcoded)
-let products = [
-  { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
-  { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
-  { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
-];
 
 // =======================
 // DOM ELEMENTS
@@ -28,6 +21,8 @@ const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
 const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
+
+const backShopBtn = document.getElementById("backShopBtn");
 
 // =======================
 // CART & WISHLIST STORAGE
@@ -81,7 +76,7 @@ function addToCart(product) {
 
 function updateCartQuantity(id, action) {
   cart = cart.map(item => {
-    if(item.id === id) {
+    if(item.id === id){
       if(action === "increase") item.quantity++;
       if(action === "decrease") item.quantity--;
     }
@@ -133,6 +128,7 @@ function removeFromWishlist(id){
 document.addEventListener("DOMContentLoaded", () => {
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
+
   const closeCartBtn = document.querySelector(".closeCart");
   const closeWishlistBtn = document.querySelector(".closeWishlist");
 
@@ -146,19 +142,21 @@ document.addEventListener("DOMContentLoaded", () => {
 // LOAD PRODUCT (HARDCODE + FIREBASE)
 // =======================
 async function loadProduct() {
-  let allProducts = [...products]; // start with hardcoded
+  let allProducts = [...products]; // start with hardcoded products
 
-  // Fetch Firebase products (if Firebase initialized)
-  if (typeof firebase !== "undefined") {
-    const db = firebase.firestore();
-    const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => {
-      allProducts.push({ id: doc.id, ...doc.data() });
-    });
+  // Fetch Firebase / server products
+  try {
+    const res = await fetch("/products");
+    if (res.ok) {
+      const firebaseProducts = await res.json();
+      allProducts = allProducts.concat(firebaseProducts);
+    }
+  } catch (err) {
+    console.error("Failed to load products from server:", err);
   }
 
-  // Find the product by id (string or number)
-  const product = allProducts.find(p => p.id == productId);
+  // Find the product by id
+  const product = allProducts.find(p => p.id == productId); // == allows string/number match
   if (!product) {
     alert("Product not found");
     window.location.href = "index.html";
@@ -172,10 +170,14 @@ async function loadProduct() {
   productPrice.textContent = `₹${product.price}`;
   productDesc.textContent = product.description;
 
-  // Update cart/wishlist buttons
   addCartBtn.onclick = () => addToCart(product);
   addWishlistBtn.onclick = () => addToWishlist(product);
 }
+
+// =======================
+// BACK TO SHOP BUTTON
+// =======================
+backShopBtn.addEventListener("click", () => window.location.href = "index.html");
 
 // =======================
 // INITIAL LOAD
@@ -183,9 +185,5 @@ async function loadProduct() {
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
-
-  const backShopBtn = document.getElementById("backShopBtn");
-  backShopBtn.addEventListener("click", () => window.location.href = "index.html");
-
-  loadProduct(); // load product (hardcoded + Firebase)
+  loadProduct();
 });
