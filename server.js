@@ -2,14 +2,11 @@ const express = require("express");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const admin = require("firebase-admin");
-const multer = require("multer");
-const path = require("path");
 require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
-app.use("/uploads", express.static(path.join(__dirname, "public/uploads"))); // serve uploaded images
 
 // -------------------- RAZORPAY SETUP --------------------
 const razorpay = new Razorpay({
@@ -31,13 +28,6 @@ const ordersRef = db.collection("orders");
 // -------------------- ADMIN TOKEN --------------------
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "mysecrettoken";
 
-// -------------------- MULTER SETUP --------------------
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "public/uploads")),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
-});
-const upload = multer({ storage });
-
 // -------------------- RAZORPAY ROUTES --------------------
 
 // Create Razorpay order
@@ -45,7 +35,7 @@ app.post("/create-order", async (req, res) => {
   try {
     const { amount } = req.body;
     const order = await razorpay.orders.create({
-      amount: amount * 100,
+      amount: amount * 100, // amount in paise
       currency: "INR",
       receipt: "rcpt_" + Date.now()
     });
@@ -60,11 +50,9 @@ app.post("/create-order", async (req, res) => {
 app.post("/verify-order", async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderData } = req.body;
-
     const h = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
     h.update(razorpay_order_id + "|" + razorpay_payment_id);
     const valid = h.digest("hex") === razorpay_signature;
-
     if (valid) {
       const newOrder = { orderId: razorpay_order_id, paymentId: razorpay_payment_id, customer: orderData, date: new Date().toISOString() };
       await ordersRef.add(newOrder);
@@ -91,24 +79,15 @@ app.get("/products", async (req, res) => {
   }
 });
 
-// Add new product (with file upload)
-app.post("/products", upload.single("image"), async (req, res) => {
+// Add new product
+app.post("/products", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-
   try {
-    const { name, price, category, description } = req.body;
-    let imageUrl = "";
-
-    if (req.file) {
-      imageUrl = "/uploads/" + req.file.filename;
-    }
-
-    const newProduct = { name, price: parseFloat(price), category, description, image: imageUrl };
+    const newProduct = req.body;
     const docRef = await productsRef.add(newProduct);
     res.status(201).json({ id: docRef.id, ...newProduct });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Failed to add product" });
   }
 });
@@ -117,7 +96,6 @@ app.post("/products", upload.single("image"), async (req, res) => {
 app.put("/products/:id", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-
   try {
     await productsRef.doc(req.params.id).update(req.body);
     res.json({ success: true });
@@ -130,7 +108,6 @@ app.put("/products/:id", async (req, res) => {
 app.delete("/products/:id", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-
   try {
     await productsRef.doc(req.params.id).delete();
     res.json({ success: true });
@@ -145,7 +122,6 @@ app.delete("/products/:id", async (req, res) => {
 app.get("/orders", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token !== ADMIN_TOKEN) return res.status(403).send("Unauthorized");
-
   try {
     const snapshot = await ordersRef.get();
     const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -155,7 +131,7 @@ app.get("/orders", async (req, res) => {
   }
 });
 
-// Add order
+// Add order (if needed separately)
 app.post("/orders", async (req, res) => {
   try {
     const newOrder = { ...req.body, date: new Date() };

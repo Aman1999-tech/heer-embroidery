@@ -67,8 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
         div.innerHTML = `
           <div>
             <b>${p.name}</b> (${p.category}) - ₹${p.price}<br>
-            <small>${p.description || ""}</small><br>
-            ${p.image ? `<img src="${p.image}" alt="${p.name}" class="h-16 mt-1 rounded">` : ""}
+            <small>${p.description || ""}</small>
           </div>
           <div class="flex gap-2">
             <button class="bg-yellow-400 px-2 rounded editBtn">Edit</button>
@@ -80,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const newName = prompt("Name:", p.name);
           const newPrice = prompt("Price:", p.price);
           const newCategory = prompt("Category:", p.category);
-          const newImage = prompt("Image URL (leave blank to keep same):", p.image);
+          const newImage = prompt("Image URL:", p.image);
           const newDesc = prompt("Description:", p.description);
 
           const res = await fetch(`/products/${p.id}`, {
@@ -91,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: JSON.stringify({
               name: newName, price: newPrice, category: newCategory,
-              image: newImage || p.image, description: newDesc
+              image: newImage, description: newDesc
             })
           });
 
@@ -123,22 +122,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const token = localStorage.getItem("adminToken");
     if (!token) { alert("⚠️ Set token first"); return; }
 
-    const formData = new FormData();
-    formData.append("name", document.getElementById("prodName").value);
-    formData.append("price", parseFloat(document.getElementById("prodPrice").value));
-    formData.append("category", document.getElementById("prodCategory").value);
-    formData.append("description", document.getElementById("prodDesc").value);
-
-    const fileInput = document.getElementById("prodImage");
-    if (fileInput.files.length > 0) {
-      formData.append("image", fileInput.files[0]);
-    }
+    const product = {
+      name: document.getElementById("prodName").value,
+      price: parseFloat(document.getElementById("prodPrice").value),
+      category: document.getElementById("prodCategory").value,
+      image: document.getElementById("prodImage").value,
+      description: document.getElementById("prodDesc").value
+    };
 
     try {
       const res = await fetch("/products", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(product)
       });
 
       if (res.ok) {
