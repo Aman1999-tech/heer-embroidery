@@ -5,6 +5,7 @@
   <title>Product Details - Heer Embroidery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     .glass {
       background: rgba(255, 255, 255, 0.15);
@@ -15,7 +16,7 @@
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
       transition: all 0.25s ease-in-out;
     }
-     #lightbox {
+    #lightbox {
       display: none;
       position: fixed;
       z-index: 999;
@@ -32,36 +33,33 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
   </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body class="bg-gray-100 font-sans">
-  
 
   <!-- Header -->
   <header class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md">
     <h1 class="text-xl font-bold">Heer Embroidery</h1>
     <div class="flex gap-4">
-      <button id="wishlistBtn" class="relative">
-        ❤️ Wishlist <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
+      <button id="wishlistBtn" class="relative">❤️ Wishlist
+        <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
       </button>
-      <button id="cartBtn" class="relative">
-        🛒 Cart <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
+      <button id="cartBtn" class="relative">🛒 Cart
+        <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
       </button>
     </div>
   </header>
 
-  <!-- Back to Shop Button -->
-<div class="max-w-6xl mx-auto p-4 flex justify-start">
-  <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
-    ← Back to Shop
-  </button>
-</div>
-
+  <!-- Back to Shop -->
+  <div class="max-w-6xl mx-auto p-4 flex justify-start">
+    <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
+      ← Back to Shop
+    </button>
+  </div>
 
   <!-- PRODUCT DETAILS -->
   <main class="max-w-4xl mx-auto p-6 flex flex-col md:flex-row gap-6">
     <div class="flex-1">
-      <img id="productImg" src="" alt="" class="w-full rounded-lg shadow">
+      <img id="productImg" src="" alt="" class="w-full rounded-lg shadow cursor-pointer">
     </div>
     <div class="flex-1 flex flex-col gap-4">
       <h2 id="productName" class="text-2xl font-bold"></h2>
@@ -70,12 +68,15 @@
       <div class="flex gap-2">
         <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add to Cart</button>
         <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded">♡ Wishlist</button>
-        
       </div>
     </div>
   </main>
 
-  
+  <!-- Lightbox for Zoom -->
+  <div id="lightbox" class="flex">
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
   <!-- Cart Drawer -->
   <div id="cartDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">
     <div class="flex justify-between items-center mb-4">
@@ -98,23 +99,6 @@
     <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
   </div>
 
-  <!-- Checkout Drawer -->
-  <div id="checkoutDrawer" class="fixed top-0 right-0 w-96 h-full glass transform translate-x-full transition p-6 flex flex-col z-50">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Checkout</h2>
-      <button class="closeCheckout">✖</button>
-    </div>
-    <form id="checkoutForm" class="flex flex-col gap-2 flex-1">
-      <input type="text" id="custName" placeholder="Full Name" class="border p-2 rounded" required>
-      <input type="email" id="custEmail" placeholder="Email" class="border p-2 rounded" required>
-      <input type="tel" id="custPhone" placeholder="Phone" class="border p-2 rounded" required>
-      <textarea id="custAddress" placeholder="Address" class="border p-2 rounded" required></textarea>
-      <button type="submit" class="bg-pink-600 text-white py-2 rounded">Pay Now</button>
-      <p id="checkoutMsg" class="mt-2 text-center text-sm text-gray-600"></p>
-    </form>
-  </div>
-
-
-  <script src="product.js"></script>
+  <script type="module" src="product.js"></script>
 </body>
 </html>

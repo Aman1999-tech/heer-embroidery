@@ -1,32 +1,15 @@
 // =======================
-// FIREBASE CONFIGURATION
-// =======================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-// Replace with your Firebase config
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// =======================
 // GET PRODUCT FROM URL
 // =======================
 const urlParams = new URLSearchParams(window.location.search);
-const productId = urlParams.get("id");
+const productId = urlParams.get("id"); // keep as string to match Firebase IDs
 
-if (!productId) {
-  alert("Product not found");
-  window.location.href = "index.html";
-}
+// Example products (hardcoded)
+let products = [
+  { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
+  { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
+  { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
+];
 
 // =======================
 // DOM ELEMENTS
@@ -153,53 +136,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeCartBtn = document.querySelector(".closeCart");
   const closeWishlistBtn = document.querySelector(".closeWishlist");
 
-  // Open Cart
-  cartBtn.addEventListener("click", () => {
-    cartDrawer.classList.remove("translate-x-full");
-  });
-
-  // Close Cart
-  closeCartBtn.addEventListener("click", () => {
-    cartDrawer.classList.add("translate-x-full");
-  });
-
-  // Open Wishlist
-  wishlistBtn.addEventListener("click", () => {
-    wishlistDrawer.classList.remove("-translate-x-full");
-  });
-
-  // Close Wishlist
-  closeWishlistBtn.addEventListener("click", () => {
-    wishlistDrawer.classList.add("-translate-x-full");
-  });
+  cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
+  closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
+  wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
+  closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
 });
 
 // =======================
-// LOAD PRODUCT FROM FIREBASE
+// LOAD PRODUCT (HARDCODE + FIREBASE)
 // =======================
 async function loadProduct() {
-  const productRef = doc(db, "products", productId);
-  const productSnap = await getDoc(productRef);
+  let allProducts = [...products]; // start with hardcoded
 
-  if (productSnap.exists()) {
-    const product = productSnap.data();
+  // Fetch Firebase products (if Firebase initialized)
+  if (typeof firebase !== "undefined") {
+    const db = firebase.firestore();
+    const snapshot = await db.collection("products").get();
+    snapshot.forEach(doc => {
+      allProducts.push({ id: doc.id, ...doc.data() });
+    });
+  }
 
-    productImg.src = product.img;
-    productImg.alt = product.name;
-    productName.textContent = product.name;
-    productPrice.textContent = `₹${product.price}`;
-    productDesc.textContent = product.description;
-
-    addCartBtn.onclick = () => addToCart({ id: productId, ...product });
-    addWishlistBtn.onclick = () => addToWishlist({ id: productId, ...product });
-  } else {
+  // Find the product by id (string or number)
+  const product = allProducts.find(p => p.id == productId);
+  if (!product) {
     alert("Product not found");
     window.location.href = "index.html";
+    return;
   }
+
+  // Load product details
+  productImg.src = product.img;
+  productImg.alt = product.name;
+  productName.textContent = product.name;
+  productPrice.textContent = `₹${product.price}`;
+  productDesc.textContent = product.description;
+
+  // Update cart/wishlist buttons
+  addCartBtn.onclick = () => addToCart(product);
+  addWishlistBtn.onclick = () => addToWishlist(product);
 }
 
 // =======================
-// BUTTON ACTIONS & INITIAL LOAD
+// INITIAL LOAD
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
@@ -208,5 +187,5 @@ document.addEventListener("DOMContentLoaded", () => {
   const backShopBtn = document.getElementById("backShopBtn");
   backShopBtn.addEventListener("click", () => window.location.href = "index.html");
 
-  loadProduct(); // Load product from Firebase
+  loadProduct(); // load product (hardcoded + Firebase)
 });
