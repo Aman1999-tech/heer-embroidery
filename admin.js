@@ -66,6 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
         div.className = "border p-2 mb-2 rounded flex justify-between items-center";
         div.innerHTML = `
           <div>
+            <a href="${p.image}" target="_blank">
+              <img src="${p.image}" alt="${p.name}" class="w-24 h-24 object-cover mb-2">
+            </a>
             <b>${p.name}</b> (${p.category}) - ₹${p.price}<br>
             <small>${p.description || ""}</small>
           </div>
