@@ -2,9 +2,9 @@
 // PRODUCTS DATA
 // =======================
 let products = [
-  { id: 1, name: "Handmade Embroidery", price: 1200, category: "Embroidery", img: "public/images/embroidery1.jpg" },
-  { id: 2, name: "Custom Bouquet", price: 800, category: "Bouquet", img: "public/images/bouquet1.jpg" },
-  { id: 3, name: "Gift Box", price: 500, category: "Gifts", img: "public/images/gift1.jpg" }
+  { id: 1, name: "Handmade Embroidery", price: 1200, category: "Embroidery", img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
+  { id: 2, name: "Custom Bouquet", price: 800, category: "Bouquet", img: "public/images/bouquet1.jpg", description: "Fresh customized flower bouquet." },
+  { id: 3, name: "Gift Box", price: 500, category: "Gifts", img: "public/images/gift1.jpg", description: "Lovely gift box for special occasions." }
 ];
 
 // =======================
@@ -34,7 +34,7 @@ async function loadAdminProducts() {
 }
 
 // =======================
-// CART & WISHLIST
+// CART & WISHLIST STORAGE
 // =======================
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
@@ -53,18 +53,18 @@ function renderProducts(filter = "All") {
   products.filter(p => filter === "All" || p.category === filter)
     .forEach(product => {
       const card = document.createElement("div");
-      card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center";
+      card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition";
       card.innerHTML = `
         <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
         <h3 class="font-semibold">${product.name}</h3>
         <p class="text-pink-600 font-bold">₹${product.price}</p>
-        <div class="flex gap-2 mt-3">
-          <button class="bg-green-600 text-white px-3 py-1 rounded addCart">Add to Cart</button>
-          <button class="bg-yellow-400 text-black px-3 py-1 rounded addWishlist">♡ Wishlist</button>
-        </div>
       `;
-      card.querySelector(".addCart").addEventListener("click", () => addToCart(product));
-      card.querySelector(".addWishlist").addEventListener("click", () => addToWishlist(product));
+      
+      // ✅ Go to product detail page
+      card.addEventListener("click", () => {
+        window.location.href = `product.html?id=${product.id}`;
+      });
+
       productGrid.appendChild(card);
     });
 }
@@ -186,64 +186,52 @@ function removeFromWishlist(id){
 }
 
 // =======================
-// RAZORPAY CHECKOUT
-// =======================
-document.getElementById("checkoutForm").addEventListener("submit", async e=>{
-  e.preventDefault();
-  if(cart.length===0){ alert("Cart is empty!"); return; }
-  const name = document.getElementById("custName").value;
-  const email = document.getElementById("custEmail").value;
-  const phone = document.getElementById("custPhone").value;
-  const address = document.getElementById("custAddress").value;
-  const items = cart.map(i=>({id:i.id,name:i.name,price:i.price,quantity:i.quantity}));
-  const totalAmount = cart.reduce((sum,i)=>sum+i.price*i.quantity,0);
-
-  const res = await fetch("/create-order",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({name,email,phone,address,items,amount:totalAmount})
-  });
-
-  const order = await res.json();
-  if(!order.id){ alert("Order creation failed"); return; }
-
-  const options = {
-    key: order.key,
-    amount: order.amount*100,
-    currency:"INR",
-    name:"Heer Embroidery",
-    order_id:order.id,
-    prefill:{name,email,contact:phone},
-    handler: async function(response){
-      const verify = await fetch("/verify-order",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({...response, orderData:{name,email,phone,address,items,totalAmount}})
-      });
-      const result = await verify.json();
-      if(result.success){
-        alert("✅ Order Successful!");
-        cart=[];
-        saveCart();
-        renderCart();
-        document.getElementById("checkoutDrawer").classList.add("translate-x-full");
-      } else alert("❌ Payment verification failed");
-    }
-  };
-
-  const rzp = new Razorpay(options);
-  rzp.open();
-});
-
-// =======================
 // DRAWER TOGGLES
 // =======================
-document.getElementById("cartBtn").addEventListener("click", ()=>cartDrawer.classList.remove("translate-x-full"));
-document.querySelector(".closeCart").addEventListener("click", ()=>cartDrawer.classList.add("translate-x-full"));
-document.getElementById("wishlistBtn").addEventListener("click", ()=>wishlistDrawer.classList.remove("-translate-x-full"));
-document.querySelector(".closeWishlist").addEventListener("click", ()=>wishlistDrawer.classList.add("-translate-x-full"));
-document.getElementById("checkoutBtn").addEventListener("click", ()=>document.getElementById("checkoutDrawer").classList.remove("translate-x-full"));
-document.querySelector(".closeCheckout").addEventListener("click", ()=>document.getElementById("checkoutDrawer").classList.add("translate-x-full"));
+document.addEventListener("DOMContentLoaded", () => {
+  const cartBtn = document.getElementById("cartBtn");
+  const wishlistBtn = document.getElementById("wishlistBtn");
+  const checkoutBtn = document.getElementById("checkoutBtn");
+
+  const cartDrawer = document.getElementById("cartDrawer");
+  const wishlistDrawer = document.getElementById("wishlistDrawer");
+  const checkoutDrawer = document.getElementById("checkoutDrawer");
+
+  const closeCartBtn = document.querySelector(".closeCart");
+  const closeWishlistBtn = document.querySelector(".closeWishlist");
+  const closeCheckoutBtn = document.querySelector(".closeCheckout");
+
+  // Open Cart
+  cartBtn.addEventListener("click", () => {
+    cartDrawer.classList.remove("translate-x-full");
+  });
+
+  // Close Cart
+  closeCartBtn.addEventListener("click", () => {
+    cartDrawer.classList.add("translate-x-full");
+  });
+
+  // Open Wishlist
+  wishlistBtn.addEventListener("click", () => {
+    wishlistDrawer.classList.remove("-translate-x-full");
+  });
+
+  // Close Wishlist
+  closeWishlistBtn.addEventListener("click", () => {
+    wishlistDrawer.classList.add("-translate-x-full");
+  });
+
+  // Checkout from Cart
+  checkoutBtn.addEventListener("click", () => {
+    cartDrawer.classList.add("translate-x-full");
+    checkoutDrawer.classList.remove("translate-x-full");
+  });
+
+  // Close Checkout
+  closeCheckoutBtn.addEventListener("click", () => {
+    checkoutDrawer.classList.add("translate-x-full");
+  });
+});
 
 // =======================
 // INITIAL LOAD
