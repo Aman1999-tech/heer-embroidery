@@ -184,4 +184,9 @@ addWishlistBtn.addEventListener("click", () => addToWishlist(product));
 document.addEventListener("DOMContentLoaded", ()=> {
   renderCart();
   renderWishlist();
+  const backShopBtn = document.getElementById("backShopBtn");
+backShopBtn.addEventListener("click", () => {
+  window.location.href = "index.html";
+});
+
 });
