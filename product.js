@@ -180,7 +180,8 @@ async function loadProduct() {
 // =======================
 // INITIAL LOAD
 // =======================
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => 
+  {
   renderCart();
   renderWishlist();
 
@@ -188,4 +189,5 @@ document.addEventListener("DOMContentLoaded", () => {
   backShopBtn.addEventListener("click", () => window.location.href = "index.html");
 
   loadProduct(); // load product (hardcoded + Firebase)
+  
 });
