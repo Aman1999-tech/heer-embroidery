@@ -13,7 +13,6 @@ let products = [
 async function loadAdminProducts() {
   try {
     const res = await fetch("/products");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const adminProducts = await res.json();
     adminProducts.forEach(p => {
       if (!products.find(prod => prod.id === p.id)) {
@@ -30,8 +29,7 @@ async function loadAdminProducts() {
     renderProducts(currentFilter || "All");
     renderFilterButtons();
   } catch (err) {
-    // keep failing gracefully (server may not exist during dev)
-    console.warn("Error loading admin products:", err);
+    console.error("Error loading admin products:", err);
   }
 }
 
@@ -51,7 +49,6 @@ let currentFilter = "All";
 
 function renderProducts(filter = "All") {
   currentFilter = filter;
-  if (!productGrid) return;
   productGrid.innerHTML = "";
   products.filter(p => filter === "All" || p.category === filter)
     .forEach(product => {
@@ -62,7 +59,7 @@ function renderProducts(filter = "All") {
         <h3 class="font-semibold">${product.name}</h3>
         <p class="text-pink-600 font-bold">₹${product.price}</p>
       `;
-
+      
       // ✅ Go to product detail page
       card.addEventListener("click", () => {
         window.location.href = `product.html?id=${product.id}`;
@@ -93,12 +90,12 @@ function renderFilterButtons() {
 // =======================
 // CART FUNCTIONS
 // =======================
+const cartDrawer = document.getElementById("cartDrawer");
 const cartItems = document.getElementById("cartItems");
 const cartCount = document.getElementById("cartCount");
 const cartTotal = document.getElementById("cartTotal");
 
 function renderCart() {
-  if (!cartItems || !cartCount || !cartTotal) return;
   cartItems.innerHTML = "";
   let total = 0;
   cart.forEach(item => {
@@ -150,11 +147,11 @@ function updateCartQuantity(id, action) {
 // =======================
 // WISHLIST FUNCTIONS
 // =======================
+const wishlistDrawer = document.getElementById("wishlistDrawer");
 const wishlistItems = document.getElementById("wishlistItems");
 const wishlistCount = document.getElementById("wishlistCount");
 
 function renderWishlist() {
-  if (!wishlistItems || !wishlistCount) return;
   wishlistItems.innerHTML = "";
   wishlist.forEach(item=>{
     const div = document.createElement("div");
@@ -189,128 +186,7 @@ function removeFromWishlist(id){
 }
 
 // =======================
-// HELPER: get numeric total in paise
-// =======================
-function getCartTotalInPaise() {
-  const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-  return Math.round(total * 100); // rupees to paise
-}
-
-// =======================
-// CHECKOUT / RAZORPAY INTEGRATION
-// =======================
-const checkoutForm = document.getElementById("checkoutForm");
-const checkoutMsg = document.getElementById("checkoutMsg");
-
-// Attach handler (if element exists)
-if (checkoutForm) {
-  checkoutForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    if (cart.length === 0) {
-      checkoutMsg.textContent = "Your cart is empty.";
-      return;
-    }
-
-    const name = document.getElementById("custName").value.trim();
-    const email = document.getElementById("custEmail").value.trim();
-    const phone = document.getElementById("custPhone").value.trim();
-    const address = document.getElementById("custAddress").value.trim();
-
-    if (!name || !email || !phone || !address) {
-      checkoutMsg.textContent = "Please fill all required fields.";
-      return;
-    }
-
-    checkoutMsg.textContent = "Creating order...";
-
-    try {
-      // Call backend to create an order using your server-side Razorpay secret key
-      const payload = {
-        amount: getCartTotalInPaise(), // paise
-        currency: 'INR',
-        receipt: `rcpt_${Date.now()}`,
-        customer: { name, email, phone, address },
-        items: cart
-      };
-
-      const res = await fetch('/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error(`Create order failed: ${res.status}`);
-      const data = await res.json();
-
-      // Expected response: { orderId, amount, currency, key } where key is Razorpay Key ID (publishable)
-      if (!data.orderId) throw new Error('Invalid order response from server');
-
-      const options = {
-        key: data.key, // razorpay key_id from server env (publishable)
-        amount: data.amount || payload.amount,
-        currency: data.currency || 'INR',
-        name: 'Heer Embroidery',
-        description: 'Order Payment',
-        order_id: data.orderId,
-        handler: async function (response) {
-          // response contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
-          checkoutMsg.textContent = 'Verifying payment...';
-          try {
-            const verifyRes = await fetch('/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                payment: response,
-                orderId: data.orderId,
-                cart,
-                customer: payload.customer
-              })
-            });
-            if (!verifyRes.ok) throw new Error(`Verify failed: ${verifyRes.status}`);
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              checkoutMsg.textContent = 'Payment successful! Thank you.';
-              // clear cart
-              cart = [];
-              saveCart();
-              renderCart();
-              // close checkout drawer if present
-              const checkoutDrawer = document.getElementById('checkoutDrawer');
-              if (checkoutDrawer) checkoutDrawer.classList.add('translate-x-full');
-            } else {
-              checkoutMsg.textContent = 'Payment verification failed. Please contact support.';
-            }
-          } catch (err) {
-            console.error('Payment verification error:', err);
-            checkoutMsg.textContent = 'Verification error. Please contact support.';
-          }
-        },
-        prefill: {
-          name,
-          email,
-          contact: phone
-        },
-        theme: { color: '#F472B6' }
-      };
-
-      // open the Razorpay checkout
-      const rzp = new Razorpay(options);
-      rzp.on('payment.failed', function (response){
-        console.error('Payment failed:', response.error);
-        checkoutMsg.textContent = 'Payment failed. Please try again.';
-      });
-      rzp.open();
-
-    } catch (err) {
-      console.error('Checkout error:', err);
-      checkoutMsg.textContent = 'Could not create order. Please try again later.';
-    }
-  });
-}
-
-// =======================
-// DRAWER TOGGLES + UI interactions
+// DRAWER TOGGLES
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   const cartBtn = document.getElementById("cartBtn");
@@ -325,43 +201,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeWishlistBtn = document.querySelector(".closeWishlist");
   const closeCheckoutBtn = document.querySelector(".closeCheckout");
 
-  // Guard elements
-  if (cartBtn && cartDrawer) {
-    cartBtn.addEventListener("click", () => {
-      cartDrawer.classList.remove("translate-x-full");
-    });
-  }
+  // Open Cart
+  cartBtn.addEventListener("click", () => {
+    cartDrawer.classList.remove("translate-x-full");
+  });
 
-  if (closeCartBtn && cartDrawer) {
-    closeCartBtn.addEventListener("click", () => {
-      cartDrawer.classList.add("translate-x-full");
-    });
-  }
+  // Close Cart
+  closeCartBtn.addEventListener("click", () => {
+    cartDrawer.classList.add("translate-x-full");
+  });
 
-  if (wishlistBtn && wishlistDrawer) {
-    wishlistBtn.addEventListener("click", () => {
-      wishlistDrawer.classList.remove("-translate-x-full");
-    });
-  }
+  // Open Wishlist
+  wishlistBtn.addEventListener("click", () => {
+    wishlistDrawer.classList.remove("-translate-x-full");
+  });
 
-  if (closeWishlistBtn && wishlistDrawer) {
-    closeWishlistBtn.addEventListener("click", () => {
-      wishlistDrawer.classList.add("-translate-x-full");
-    });
-  }
+  // Close Wishlist
+  closeWishlistBtn.addEventListener("click", () => {
+    wishlistDrawer.classList.add("-translate-x-full");
+  });
 
-  if (checkoutBtn && cartDrawer && checkoutDrawer) {
-    checkoutBtn.addEventListener("click", () => {
-      cartDrawer.classList.add("translate-x-full");
-      checkoutDrawer.classList.remove("translate-x-full");
-    });
-  }
+  // Checkout from Cart
+  checkoutBtn.addEventListener("click", () => {
+    cartDrawer.classList.add("translate-x-full");
+    checkoutDrawer.classList.remove("translate-x-full");
+  });
 
-  if (closeCheckoutBtn && checkoutDrawer) {
-    closeCheckoutBtn.addEventListener("click", () => {
-      checkoutDrawer.classList.add("translate-x-full");
-    });
-  }
+  // Close Checkout
+  closeCheckoutBtn.addEventListener("click", () => {
+    checkoutDrawer.classList.add("translate-x-full");
+  });
 });
 
 // =======================
@@ -374,3 +243,80 @@ document.addEventListener("DOMContentLoaded", ()=>{
   renderProducts();
   loadAdminProducts();
 });
+// =======================
+// CHECKOUT FORM SUBMIT
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
+  const checkoutForm = document.getElementById("checkoutForm");
+  const checkoutMsg = document.getElementById("checkoutMsg");
+
+  checkoutForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // collect customer info
+    const orderData = {
+      name: document.getElementById("custName").value,
+      email: document.getElementById("custEmail").value,
+      phone: document.getElementById("custPhone").value,
+      address: document.getElementById("custAddress").value,
+      items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
+    };
+
+    // calculate total
+    const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    if (amount <= 0) {
+      checkoutMsg.textContent = "⚠️ Cart is empty!";
+      return;
+    }
+
+    try {
+      // 1. Create order on backend
+      const res = await fetch("/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount })
+      });
+      const order = await res.json();
+      if (!order.id) throw new Error("Order not created");
+
+      // 2. Open Razorpay
+      const options = {
+        key: order.key, // from server response
+        amount: order.amount,
+        currency: "INR",
+        name: "Heer Embroidery",
+        description: "Order Payment",
+        order_id: order.id,
+        handler: async function (response) {
+          // verify payment on backend
+          const verifyRes = await fetch("/verify-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...response, orderData })
+          });
+          const verifyJson = await verifyRes.json();
+          if (verifyJson.success) {
+            checkoutMsg.textContent = "✅ Payment successful! Thank you.";
+            cart = [];
+            renderCart();
+          } else {
+            checkoutMsg.textContent = "❌ Payment verification failed.";
+          }
+        },
+        prefill: {
+          name: orderData.name,
+          email: orderData.email,
+          contact: orderData.phone
+        },
+        theme: { color: "#e11d48" }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      checkoutMsg.textContent = "❌ Could not create order, please try again later.";
+    }
+  });
+});
+
