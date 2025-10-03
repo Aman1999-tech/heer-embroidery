@@ -2,7 +2,7 @@
 // GET PRODUCT FROM URL
 // =======================
 const urlParams = new URLSearchParams(window.location.search);
-const productId = urlParams.get("id"); // keep as string to match Firebase IDs
+const productId = urlParams.get("id");
 
 // Example products (hardcoded)
 let products = [
@@ -20,14 +20,16 @@ const productPrice = document.getElementById("productPrice");
 const productDesc = document.getElementById("productDesc");
 const addCartBtn = document.getElementById("addCartBtn");
 const addWishlistBtn = document.getElementById("addWishlistBtn");
-
-const cartDrawer = document.getElementById("cartDrawer");
-const wishlistDrawer = document.getElementById("wishlistDrawer");
 const cartItems = document.getElementById("cartItems");
 const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
 const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
+
+// Drawers
+const cartDrawer = document.getElementById("cartDrawer");
+const wishlistDrawer = document.getElementById("wishlistDrawer");
+const checkoutDrawer = document.getElementById("checkoutDrawer");
 
 // =======================
 // CART & WISHLIST STORAGE
@@ -64,7 +66,7 @@ function renderCart() {
     div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
     cartItems.appendChild(div);
   });
-  cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0);
+  cartCount.textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
   cartTotal.textContent = `₹${total}`;
   saveCart();
 }
@@ -72,18 +74,18 @@ function renderCart() {
 function addToCart(product) {
   const existing = cart.find(i => i.id === product.id);
   if (existing) existing.quantity++;
-  else cart.push({...product, quantity:1});
+  else cart.push({ ...product, quantity: 1 });
   wishlist = wishlist.filter(i => i.id !== product.id);
-  saveWishlist();
   renderWishlist();
   renderCart();
+  saveWishlist();
 }
 
 function updateCartQuantity(id, action) {
   cart = cart.map(item => {
-    if(item.id === id) {
-      if(action === "increase") item.quantity++;
-      if(action === "decrease") item.quantity--;
+    if (item.id === id) {
+      if (action === "increase") item.quantity++;
+      if (action === "decrease") item.quantity--;
     }
     return item;
   }).filter(i => i.quantity > 0);
@@ -117,47 +119,28 @@ function renderWishlist() {
   saveWishlist();
 }
 
-function addToWishlist(product){
-  if(!wishlist.find(i => i.id === product.id)) wishlist.push(product);
+function addToWishlist(product) {
+  if (!wishlist.find(i => i.id === product.id)) wishlist.push(product);
   renderWishlist();
 }
 
-function removeFromWishlist(id){
+function removeFromWishlist(id) {
   wishlist = wishlist.filter(i => i.id !== id);
   renderWishlist();
 }
 
 // =======================
-// DRAWER TOGGLES
-// =======================
-document.addEventListener("DOMContentLoaded", () => {
-  const cartBtn = document.getElementById("cartBtn");
-  const wishlistBtn = document.getElementById("wishlistBtn");
-  const closeCartBtn = document.querySelector(".closeCart");
-  const closeWishlistBtn = document.querySelector(".closeWishlist");
-
-  cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
-  closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
-  wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
-  closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
-});
-
-// =======================
-// LOAD PRODUCT (HARDCODE + FIREBASE)
+// LOAD PRODUCT
 // =======================
 async function loadProduct() {
-  let allProducts = [...products]; // start with hardcoded
+  let allProducts = [...products];
 
-  // Fetch Firebase products (if Firebase initialized)
   if (typeof firebase !== "undefined") {
     const db = firebase.firestore();
     const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => {
-      allProducts.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
   }
 
-  // Find the product by id (string or number)
   const product = allProducts.find(p => p.id == productId);
   if (!product) {
     alert("Product not found");
@@ -165,29 +148,117 @@ async function loadProduct() {
     return;
   }
 
-  // Load product details
   productImg.src = product.img;
   productImg.alt = product.name;
   productName.textContent = product.name;
   productPrice.textContent = `₹${product.price}`;
   productDesc.textContent = product.description;
 
-  // Update cart/wishlist buttons
   addCartBtn.onclick = () => addToCart(product);
   addWishlistBtn.onclick = () => addToWishlist(product);
 }
 
 // =======================
-// INITIAL LOAD
+// INITIAL LOAD & EVENT LISTENERS
 // =======================
-document.addEventListener("DOMContentLoaded", () => 
-  {
+document.addEventListener("DOMContentLoaded", () => {
+  // Render existing cart/wishlist
   renderCart();
   renderWishlist();
 
-  const backShopBtn = document.getElementById("backShopBtn");
-  backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+  // Load product
+  loadProduct();
 
-  loadProduct(); // load product (hardcoded + Firebase)
-  
+  // Back button
+  const backShopBtn = document.getElementById("backShopBtn");
+  if (backShopBtn) backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+
+  // Drawer toggles
+  const cartBtn = document.getElementById("cartBtn");
+  const wishlistBtn = document.getElementById("wishlistBtn");
+  const checkoutBtn = document.getElementById("checkoutBtn");
+  const closeCartBtn = document.querySelector(".closeCart");
+  const closeWishlistBtn = document.querySelector(".closeWishlist");
+  const closeCheckoutBtn = document.querySelector(".closeCheckout");
+
+  if (cartBtn) cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
+  if (closeCartBtn) closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
+  if (wishlistBtn) wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
+  if (closeWishlistBtn) closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
+  if (checkoutBtn) checkoutBtn.addEventListener("click", () => {
+    cartDrawer.classList.add("translate-x-full");
+    checkoutDrawer.classList.remove("translate-x-full");
+  });
+  if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
+
+  // =======================
+  // Checkout form submit
+  // =======================
+  const checkoutForm = document.getElementById("checkoutForm");
+  const checkoutMsg = document.getElementById("checkoutMsg");
+  if (checkoutForm) {
+    checkoutForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const orderData = {
+        name: document.getElementById("custName").value,
+        email: document.getElementById("custEmail").value,
+        phone: document.getElementById("custPhone").value,
+        address: document.getElementById("custAddress").value,
+        items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
+      };
+
+      const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      if (amount <= 0) {
+        checkoutMsg.textContent = "⚠️ Cart is empty!";
+        return;
+      }
+
+      try {
+        const res = await fetch("/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount })
+        });
+        const order = await res.json();
+        if (!order.id) throw new Error("Order not created");
+
+        const options = {
+          key: order.key,
+          amount: order.amount,
+          currency: "INR",
+          name: "Heer Embroidery",
+          description: "Order Payment",
+          order_id: order.id,
+          handler: async function (response) {
+            const verifyRes = await fetch("/verify-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...response, orderData })
+            });
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              checkoutMsg.textContent = "✅ Payment successful! Thank you.";
+              cart = [];
+              renderCart();
+            } else {
+              checkoutMsg.textContent = "❌ Payment verification failed.";
+            }
+          },
+          prefill: {
+            name: orderData.name,
+            email: orderData.email,
+            contact: orderData.phone
+          },
+          theme: { color: "#e11d48" }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error(err);
+        checkoutMsg.textContent = "❌ Could not create order, please try again later.";
+      }
+    });
+  }
 });
