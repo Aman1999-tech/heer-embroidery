@@ -41,6 +41,34 @@ function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
 // =======================
+// SMALL POPUP MESSAGE FUNCTION
+// =======================
+function showPopupMessage(message, color = "bg-green-600") {
+  const popup = document.createElement("div");
+  popup.textContent = message;
+  popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
+  document.body.appendChild(popup);
+
+  setTimeout(() => {
+    popup.classList.add("opacity-0", "transition", "duration-500");
+    setTimeout(() => popup.remove(), 500);
+  }, 1500);
+}
+
+// Add animation via CSS
+const style = document.createElement("style");
+style.innerHTML = `
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+`;
+document.head.appendChild(style);
+
+// =======================
 // CART FUNCTIONS
 // =======================
 function renderCart() {
@@ -54,7 +82,7 @@ function renderCart() {
       <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
       <div class="flex-1 ml-2">
         <p class="font-semibold">${item.name}</p>
-        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price*item.quantity}</p>
+        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</p>
       </div>
       <div class="flex flex-col items-center gap-1">
         <button class="bg-gray-300 px-2 rounded increase">+</button>
@@ -79,6 +107,7 @@ function addToCart(product) {
   renderWishlist();
   renderCart();
   saveWishlist();
+  showPopupMessage("✅ Product added to cart!");
 }
 
 function updateCartQuantity(id, action) {
@@ -120,8 +149,13 @@ function renderWishlist() {
 }
 
 function addToWishlist(product) {
-  if (!wishlist.find(i => i.id === product.id)) wishlist.push(product);
-  renderWishlist();
+  if (!wishlist.find(i => i.id === product.id)) {
+    wishlist.push(product);
+    renderWishlist();
+    showPopupMessage("💖 Product added to wishlist!", "bg-pink-600");
+  } else {
+    showPopupMessage("⚠️ Already in wishlist!", "bg-yellow-500");
+  }
 }
 
 function removeFromWishlist(id) {
@@ -162,18 +196,13 @@ async function loadProduct() {
 // INITIAL LOAD & EVENT LISTENERS
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
-  // Render existing cart/wishlist
   renderCart();
   renderWishlist();
-
-  // Load product
   loadProduct();
 
-  // Back button
   const backShopBtn = document.getElementById("backShopBtn");
   if (backShopBtn) backShopBtn.addEventListener("click", () => window.location.href = "index.html");
 
-  // Drawer toggles
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
   const checkoutBtn = document.getElementById("checkoutBtn");
