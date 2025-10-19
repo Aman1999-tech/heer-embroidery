@@ -15,23 +15,28 @@
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
       transition: all 0.25s ease-in-out;
     }
-    button:hover, .social-btn:hover {
-      transform: scale(1.1);
-    }
+    button:hover, .social-btn:hover { transform: scale(1.05); }
     .social-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.25);
-      backdrop-filter: blur(10px);
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.25); backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      color: #E4405F;
-      font-size: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      color: #E4405F; font-size: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       transition: all 0.25s ease-in-out;
+    }
+
+    /* Backdrop for drawers */
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .drawer-backdrop.visible { opacity: 1; pointer-events: auto; }
+
+    /* Small responsive tweaks */
+    @media (max-width: 640px) {
+      #productGrid img { width: 100%; height: auto; }
+      .w-80 { width: 18rem; } /* keep drawer compact */
+      .w-96 { width: 20rem; }
     }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -41,13 +46,10 @@
   <!-- Header -->
   <header class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md">
     <h1 class="text-xl font-bold">Heer Embroidery</h1>
-    <div class="flex gap-4">
-      <button id="wishlistBtn" class="relative">
-        ❤️ Wishlist <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
-      </button>
-      <button id="cartBtn" class="relative">
-        🛒 Cart <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
-      </button>
+    <div class="flex gap-4 items-center">
+      <div id="adminTokenIndicator" class="hidden text-sm bg-white/20 px-3 py-1 rounded text-white">Token: <span id="tokenStatus">—</span> · <button id="logoutToken" class="underline text-white ml-2">Logout</button></div>
+      <button id="wishlistBtn" class="relative">❤️ Wishlist <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span></button>
+      <button id="cartBtn" class="relative">🛒 Cart <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span></button>
     </div>
   </header>
 
@@ -55,7 +57,12 @@
   <div class="p-4 flex gap-2 justify-center filter-btns-container"></div>
 
   <!-- Product Grid -->
-  <main class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6" id="productGrid"></main>
+  <main class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6" id="productGrid">
+    <!-- Loading / No products UI will be injected by JS -->
+  </main>
+
+  <!-- Drawer Backdrop -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
 
   <!-- Cart Drawer -->
   <div id="cartDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">

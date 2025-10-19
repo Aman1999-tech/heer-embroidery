@@ -17,22 +17,8 @@
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
       transition: all 0.25s ease-in-out;
     }
-    #lightbox {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    #lightbox img {
-      max-width: 90%;
-      max-height: 80%;
-      border-radius: 1rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
+    #lightbox { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+    #lightbox img { max-width: 90%; max-height: 80%; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
   </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -52,15 +38,13 @@
 
   <!-- Back to Shop -->
   <div class="max-w-6xl mx-auto p-4 flex justify-start">
-    <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
-      ← Back to Shop
-    </button>
+    <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">← Back to Shop</button>
   </div>
 
   <!-- PRODUCT DETAILS -->
   <main class="max-w-4xl mx-auto p-6 flex flex-col md:flex-row gap-6">
     <div class="flex-1">
-      <img id="productImg" src="" alt="" class="w-full rounded-lg shadow cursor-pointer">
+      <img id="productImg" src="" alt="" class="w-full rounded-lg shadow cursor-pointer" loading="lazy">
     </div>
     <div class="flex-1 flex flex-col gap-4">
       <h2 id="productName" class="text-2xl font-bold"></h2>
@@ -78,7 +62,7 @@
     <img id="lightboxImg" src="" alt="">
   </div>
 
-  <!-- Cart Drawer -->
+  <!-- Cart, Checkout, Wishlist Drawers (same structure as index) -->
   <div id="cartDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-lg font-bold">Your Cart</h2>
@@ -90,26 +74,22 @@
       <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
     </div>
   </div>
-  <!-- =======================
-CHECKOUT DRAWER
-======================= -->
-<div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
-  <div class="p-4 flex justify-between items-center border-b">
-    <h2 class="font-bold text-lg">Checkout</h2>
-    <button class="closeCheckout text-gray-500">✕</button>
+
+  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
+    <div class="p-4 flex justify-between items-center border-b">
+      <h2 class="font-bold text-lg">Checkout</h2>
+      <button class="closeCheckout text-gray-500">✕</button>
+    </div>
+    <form id="checkoutForm" class="p-4 space-y-3">
+      <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
+      <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
+      <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
+      <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
+      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
+      <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
+    </form>
   </div>
-  <form id="checkoutForm" class="p-4 space-y-3">
-    <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
-    <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
-    <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
-    <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
-    <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
-    <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
-  </form>
-</div>
 
-
-  <!-- Wishlist Drawer -->
   <div id="wishlistDrawer" class="fixed top-0 left-0 w-80 h-full glass transform -translate-x-full transition p-4 flex flex-col z-50">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-lg font-bold">Your Wishlist</h2>

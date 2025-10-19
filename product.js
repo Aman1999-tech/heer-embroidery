@@ -1,19 +1,11 @@
 // =======================
-// GET PRODUCT FROM URL
+// product.js (improved)
 // =======================
+
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
-// Example products (hardcoded)
-let products = [
-  { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
-  { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
-  { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
-];
-
-// =======================
-// DOM ELEMENTS
-// =======================
+// DOM elements
 const productImg = document.getElementById("productImg");
 const productName = document.getElementById("productName");
 const productPrice = document.getElementById("productPrice");
@@ -31,46 +23,34 @@ const cartDrawer = document.getElementById("cartDrawer");
 const wishlistDrawer = document.getElementById("wishlistDrawer");
 const checkoutDrawer = document.getElementById("checkoutDrawer");
 
-// =======================
-// CART & WISHLIST STORAGE
-// =======================
+// CART & WISHLIST storage
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 
+// helpers
 function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
-// =======================
-// SMALL POPUP MESSAGE FUNCTION
-// =======================
 function showPopupMessage(message, color = "bg-green-600") {
   const popup = document.createElement("div");
   popup.textContent = message;
   popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
   document.body.appendChild(popup);
-
   setTimeout(() => {
     popup.classList.add("opacity-0", "transition", "duration-500");
     setTimeout(() => popup.remove(), 500);
   }, 1500);
 }
 
-// Add animation via CSS
+// animation style
 const style = document.createElement("style");
 style.innerHTML = `
-@keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out;
-}
+@keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.animate-slideIn { animation: slideIn 0.3s ease-out; }
 `;
 document.head.appendChild(style);
 
-// =======================
-// CART FUNCTIONS
-// =======================
+// render cart/wishlist functions (copied from app.js style to keep behaviour)
 function renderCart() {
   cartItems.innerHTML = "";
   let total = 0;
@@ -79,7 +59,7 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "flex justify-between items-center mb-3 border-b pb-2";
     div.innerHTML = `
-      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2" loading="lazy">
       <div class="flex-1 ml-2">
         <p class="font-semibold">${item.name}</p>
         <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</p>
@@ -121,16 +101,13 @@ function updateCartQuantity(id, action) {
   renderCart();
 }
 
-// =======================
-// WISHLIST FUNCTIONS
-// =======================
 function renderWishlist() {
   wishlistItems.innerHTML = "";
   wishlist.forEach(item => {
     const div = document.createElement("div");
     div.className = "flex justify-between items-center mb-3 border-b pb-2";
     div.innerHTML = `
-      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2" loading="lazy">
       <div class="flex-1 ml-2">
         <p class="font-semibold">${item.name}</p>
         <p class="text-sm text-gray-600">₹${item.price}</p>
@@ -163,38 +140,62 @@ function removeFromWishlist(id) {
   renderWishlist();
 }
 
-// =======================
-// LOAD PRODUCT
-// =======================
+// LOAD product from backend (/products) or fallback local list if backend unavailable
 async function loadProduct() {
-  let allProducts = [...products];
+  let allProducts = [];
 
-  if (typeof firebase !== "undefined") {
-    const db = firebase.firestore();
-    const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
+  try {
+    const res = await fetch("/products");
+    if (res.ok) {
+      const backendProducts = await res.json();
+      backendProducts.forEach(doc => allProducts.push({ id: doc.id || doc._id || doc.productId, ...doc }));
+    } else {
+      throw new Error('No backend products');
+    }
+  } catch (err) {
+    // fallback: nothing (we no longer keep hardcoded defaults)
+    console.warn("Could not fetch backend products:", err);
   }
 
-  const product = allProducts.find(p => p.id == productId);
+  const product = allProducts.find(p => String(p.id) === String(productId));
   if (!product) {
     alert("Product not found");
     window.location.href = "index.html";
     return;
   }
 
-  productImg.src = product.img;
+  productImg.src = product.img || product.image || "public/images/placeholder.jpg";
   productImg.alt = product.name;
   productName.textContent = product.name;
   productPrice.textContent = `₹${product.price}`;
-  productDesc.textContent = product.description;
+  productDesc.textContent = product.description || "";
 
-  addCartBtn.onclick = () => addToCart(product);
-  addWishlistBtn.onclick = () => addToWishlist(product);
+  addCartBtn.onclick = () => addToCart({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    img: product.img || product.image
+  });
+  addWishlistBtn.onclick = () => addToWishlist({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    img: product.img || product.image
+  });
+
+  // Lightbox
+  productImg.addEventListener("click", () => {
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightboxImg");
+    lightboxImg.src = productImg.src;
+    lightbox.style.display = "flex";
+  });
+  const lightbox = document.getElementById("lightbox");
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) lightbox.style.display = "none";
+  });
 }
 
-// =======================
-// INITIAL LOAD & EVENT LISTENERS
-// =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
@@ -220,15 +221,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
 
-  // =======================
-  // Checkout form submit
-  // =======================
+  // checkout similar to index (reuses /create-order)
   const checkoutForm = document.getElementById("checkoutForm");
   const checkoutMsg = document.getElementById("checkoutMsg");
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const orderData = {
         name: document.getElementById("custName").value,
         email: document.getElementById("custEmail").value,
@@ -236,13 +234,11 @@ document.addEventListener("DOMContentLoaded", () => {
         address: document.getElementById("custAddress").value,
         items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
       };
-
       const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
       if (amount <= 0) {
         checkoutMsg.textContent = "⚠️ Cart is empty!";
         return;
       }
-
       try {
         const res = await fetch("/create-order", {
           method: "POST",
@@ -251,7 +247,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const order = await res.json();
         if (!order.id) throw new Error("Order not created");
-
         const options = {
           key: order.key,
           amount: order.amount,
@@ -259,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
           name: "Heer Embroidery",
           description: "Order Payment",
           order_id: order.id,
-          handler: async function (response) {
+          handler: async function(response) {
             const verifyRes = await fetch("/verify-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -281,7 +276,6 @@ document.addEventListener("DOMContentLoaded", () => {
           },
           theme: { color: "#e11d48" }
         };
-
         const rzp = new Razorpay(options);
         rzp.open();
       } catch (err) {
