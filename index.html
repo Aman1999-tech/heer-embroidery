@@ -5,7 +5,6 @@
   <title>Heer Embroidery - Handmade Products</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     .glass {
       background: rgba(255, 255, 255, 0.15);
@@ -35,6 +34,7 @@
       transition: all 0.25s ease-in-out;
     }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -95,9 +95,32 @@
     </form>
   </div>
 
+  <!-- Contact Section -->
+  <section id="contact" class="max-w-7xl mx-auto px-4 py-12">
+    <div class="glass rounded-2xl p-8 text-center shadow-md">
+      <h2 class="text-3xl font-bold text-pink-700 mb-6">Get in Touch</h2>
+      <div class="flex flex-col sm:flex-row justify-center gap-8 text-gray-800">
+        <p class="flex items-center gap-2">📞 <a href="tel:+918360976726" class="hover:underline hover:text-pink-600">+91-8360976726</a></p>
+        <p class="flex items-center gap-2">📧 <a href="mailto:navjotrani22@gmail.com" class="hover:underline hover:text-pink-600">navjotrani22@gmail.com</a></p>
+        <p class="flex items-center gap-2">📍 Hoshiarpur, India</p>
+        <p class="mt-3 flex justify-center items-center gap-2 text-gray-700">
+          <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" class="w-6 h-6">
+          <a href="https://www.instagram.com/embroidery_heer2" target="_blank" class="hover:underline text-pink-600 font-medium">@embroidery_heer2</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer class="glass text-center py-6 mt-10 text-gray-700 rounded-t-2xl shadow-inner">
     <p class="mb-3">© 2024 <span class="font-bold text-pink-700">Heer Embroidery</span>. All Rights Reserved.</p>
+    <div class="flex flex-wrap justify-center gap-4 text-sm mb-4">
+      <a href="privacy.html" target="_blank" class="hover:text-pink-600 hover:underline">Privacy Policy</a>
+      <a href="terms.html" target="_blank" class="hover:text-pink-600 hover:underline">Terms & Conditions</a>
+      <a href="shipping.html" target="_blank" class="hover:text-pink-600 hover:underline">Shipping Policy</a>
+      <a href="refund.html" target="_blank" class="hover:text-pink-600 hover:underline">Refund & Cancellation</a>
+      <a href="#contact" class="hover:text-pink-600 hover:underline">Contact Us</a>
+    </div>
     <div class="flex justify-center gap-4">
       <a href="https://www.instagram.com/embroidery_heer2" target="_blank" class="social-btn" aria-label="Instagram">
         <i class="fab fa-instagram"></i>
@@ -105,7 +128,7 @@
     </div>
   </footer>
 
-  <!-- Firebase & Scripts -->
-  <script type="module" src="app.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
