@@ -193,32 +193,6 @@ async function loadProduct() {
 }
 
 // =======================
-// LOAD ADMIN PRODUCTS
-// =======================
-async function loadAdminProducts() {
-  try {
-    const res = await fetch("/products");
-    const adminProducts = await res.json();
-    adminProducts.forEach(p => {
-      if (!products.find(prod => prod.id === p.id)) {
-        products.push({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          category: p.category,
-          img: p.image || "public/images/placeholder.jpg",
-          description: p.description || ""
-        });
-      }
-    });
-    renderProducts(currentFilter);
-    renderFilterButtons();
-  } catch (err) {
-    console.error("Error loading admin products:", err);
-  }
-}
-
-// =======================
 // INITIAL LOAD & EVENT LISTENERS
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
