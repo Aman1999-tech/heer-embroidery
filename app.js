@@ -155,40 +155,33 @@ function renderFilterButtons() {
 }
 
 // =======================
-// LOAD ADMIN PRODUCTS (updated)
+// LOAD ADMIN PRODUCTS
 // =======================
 async function loadAdminProducts() {
   try {
     const res = await fetch("/products");
     const adminProducts = await res.json();
-
     adminProducts.forEach(p => {
-      if (!p.name || !p.price) return;
-      const exists = products.find(prod =>
-        prod.name.toLowerCase() === p.name.toLowerCase() ||
-        prod.id === p.id
-      );
-      if (exists) return;
-
-      products.push({
-        id: p.id || p.docId || crypto.randomUUID(),
-        name: p.name,
-        price: p.price,
-        category: p.category || "Other",
-        img: p.image || "public/images/placeholder.jpg",
-        description: p.description || "No description available."
-      });
+      if (!products.find(prod => prod.id === p.id)) {
+        products.push({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          category: p.category,
+          img: p.image || "public/images/placeholder.jpg",
+          description: p.description || ""
+        });
+      }
     });
-
-    renderFilterButtons();
     renderProducts(currentFilter);
+    renderFilterButtons();
   } catch (err) {
     console.error("Error loading admin products:", err);
   }
 }
 
 // =======================
-// DOMContentLoaded
+// DOMContentLoaded (all in one)
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
@@ -197,6 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderProducts();
   loadAdminProducts();
 
+  // Drawer toggles
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
   const checkoutBtn = document.getElementById("checkoutBtn");
@@ -215,4 +209,67 @@ document.addEventListener("DOMContentLoaded", () => {
     checkoutDrawer.classList.remove("translate-x-full");
   });
   closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
+
+  // Checkout form
+  const checkoutForm = document.getElementById("checkoutForm");
+  const checkoutMsg = document.getElementById("checkoutMsg");
+
+  if (checkoutForm) {
+    checkoutForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const orderData = {
+        name: document.getElementById("custName").value,
+        email: document.getElementById("custEmail").value,
+        phone: document.getElementById("custPhone").value,
+        address: document.getElementById("custAddress").value,
+        items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
+      };
+      const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      if (amount <= 0) {
+        checkoutMsg.textContent = "⚠️ Cart is empty!";
+        return;
+      }
+      try {
+        const res = await fetch("/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount })
+        });
+        const order = await res.json();
+        if (!order.id) throw new Error("Order not created");
+
+        const options = {
+          key: order.key,
+          amount: order.amount,
+          currency: "INR",
+          name: "Heer Embroidery",
+          description: "Order Payment",
+          order_id: order.id,
+          handler: async function(response) {
+            const verifyRes = await fetch("/verify-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...response, orderData })
+            });
+            const verifyJson = await verifyRes.json();
+            if (verifyJson.success) {
+              checkoutMsg.textContent = "✅ Payment successful! Thank you.";
+              cart = [];
+              renderCart();
+            } else {
+              checkoutMsg.textContent = "❌ Payment verification failed.";
+            }
+          },
+          prefill: { name: orderData.name, email: orderData.email, contact: orderData.phone },
+          theme: { color: "#e11d48" }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error(err);
+        checkoutMsg.textContent = "❌ Could not create order, please try again later.";
+      }
+    });
+  }
 });
