@@ -1,15 +1,9 @@
 // =======================
-// PRODUCTS DATA
+// GLOBAL ARRAYS
 // =======================
-let products = [
-  { id: 1, name: "Handmade Embroidery", price: 1200, category: "Embroidery", img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
-  { id: 2, name: "Custom Bouquet", price: 800, category: "Bouquet", img: "public/images/bouquet1.jpg", description: "Fresh customized flower bouquet." },
-  { id: 3, name: "Gift Box", price: 500, category: "Gifts", img: "public/images/gift1.jpg", description: "Lovely gift box for special occasions." }
-];
-
+let products = []; // no hardcoded items anymore
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-let currentFilter = "All";
 
 // =======================
 // DOM ELEMENTS
@@ -120,77 +114,72 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// RENDER PRODUCTS
+// LOAD PRODUCTS (ONLY FROM SERVER)
 // =======================
-function renderProducts(filter = "All") {
-  currentFilter = filter;
-  productGrid.innerHTML = "";
-  products.filter(p => filter === "All" || p.category === filter)
-    .forEach(product => {
-      const card = document.createElement("div");
-      card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition";
-      card.innerHTML = `
-        <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
-        <h3 class="font-semibold">${product.name}</h3>
-        <p class="text-pink-600 font-bold">₹${product.price}</p>
-      `;
-      card.addEventListener("click", () => window.location.href = `product.html?id=${product.id}`);
-      productGrid.appendChild(card);
-    });
-}
-
-function renderFilterButtons() {
-  const container = document.querySelector(".filter-btns-container");
-  if (!container) return;
-  const categories = ["All", ...new Set(products.map(p => p.category))];
-  container.innerHTML = "";
-  categories.forEach(cat => {
-    const btn = document.createElement("button");
-    btn.className = "filter-btn glass px-3 py-1 rounded";
-    btn.dataset.cat = cat;
-    btn.textContent = cat;
-    btn.addEventListener("click", () => renderProducts(cat));
-    container.appendChild(btn);
-  });
-}
-
-// =======================
-// LOAD ADMIN PRODUCTS
-// =======================
-async function loadAdminProducts() {
+async function loadProducts() {
   try {
     const res = await fetch("/products");
     const adminProducts = await res.json();
-    adminProducts.forEach(p => {
-      if (!products.find(prod => prod.id === p.id)) {
-        products.push({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          category: p.category,
-          img: p.image || "public/images/placeholder.jpg",
-          description: p.description || ""
-        });
-      }
-    });
-    renderProducts(currentFilter);
-    renderFilterButtons();
+    products = adminProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      img: p.image || "public/images/placeholder.jpg",
+      description: p.description || ""
+    }));
+    renderAllProducts();
   } catch (err) {
-    console.error("Error loading admin products:", err);
+    console.error("Error loading products:", err);
   }
 }
 
 // =======================
-// DOMContentLoaded (all in one)
+// RENDER PRODUCTS
+// =======================
+function renderAllProducts() {
+  productGrid.innerHTML = "";
+  if (!products.length) {
+    productGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">No products available yet</p>`;
+    return;
+  }
+  products.forEach(product => {
+    const card = document.createElement("div");
+    card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
+    card.innerHTML = `
+      <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
+      <h3 class="font-semibold">${product.name}</h3>
+      <p class="text-pink-600 font-bold">₹${product.price}</p>
+    `;
+    card.addEventListener("click", () => window.location.href = `product.html?id=${product.id}`);
+    productGrid.appendChild(card);
+  });
+}
+
+// =======================
+// ONLY ONE "ALL" FILTER BUTTON
+// =======================
+function renderSingleAllFilter() {
+  const container = document.querySelector(".filter-btns-container");
+  if (!container) return;
+  container.innerHTML = "";
+  const btn = document.createElement("button");
+  btn.className = "filter-btn glass px-3 py-1 rounded bg-pink-600 text-white";
+  btn.textContent = "All";
+  btn.addEventListener("click", () => renderAllProducts());
+  container.appendChild(btn);
+}
+
+// =======================
+// DOMContentLoaded HANDLER
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
-  renderFilterButtons();
-  renderProducts();
-  loadAdminProducts();
+  renderSingleAllFilter();
+  loadProducts();
 
-  // Drawer toggles
+  // Drawers
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
   const checkoutBtn = document.getElementById("checkoutBtn");
