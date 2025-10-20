@@ -1,9 +1,10 @@
 // =======================
 // GLOBAL ARRAYS
 // =======================
-let products = []; // no hardcoded items anymore
+let products = [];
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+let currentFilter = "All";
 
 // =======================
 // DOM ELEMENTS
@@ -38,7 +39,7 @@ function renderCart() {
       <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
       <div class="flex-1 ml-2">
         <p class="font-semibold">${item.name}</p>
-        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price*item.quantity}</p>
+        <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</p>
       </div>
       <div class="flex flex-col items-center gap-1">
         <button class="bg-gray-300 px-2 rounded increase">+</button>
@@ -50,7 +51,7 @@ function renderCart() {
     div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
     cartItems.appendChild(div);
   });
-  cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0);
+  cartCount.textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
   cartTotal.textContent = `₹${total}`;
   saveCart();
 }
@@ -114,38 +115,26 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// LOAD PRODUCTS (ONLY FROM SERVER)
-// =======================
-async function loadProducts() {
-  try {
-    const res = await fetch("/products");
-    const adminProducts = await res.json();
-    products = adminProducts.map(p => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      category: p.category,
-      img: p.image || "public/images/placeholder.jpg",
-      description: p.description || ""
-    }));
-    renderAllProducts();
-  } catch (err) {
-    console.error("Error loading products:", err);
-  }
-}
-
-// =======================
 // RENDER PRODUCTS
 // =======================
-function renderAllProducts() {
+function renderProducts(filter = "All") {
+  currentFilter = filter;
   productGrid.innerHTML = "";
-  if (!products.length) {
-    productGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">No products available yet</p>`;
+
+  const filtered =
+    filter === "All"
+      ? products
+      : products.filter((p) => p.category === filter);
+
+  if (!filtered.length) {
+    productGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">No products available</p>`;
     return;
   }
-  products.forEach(product => {
+
+  filtered.forEach((product) => {
     const card = document.createElement("div");
-    card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
+    card.className =
+      "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
     card.innerHTML = `
       <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
       <h3 class="font-semibold">${product.name}</h3>
@@ -157,29 +146,58 @@ function renderAllProducts() {
 }
 
 // =======================
-// ONLY ONE "ALL" FILTER BUTTON
+// FILTER BUTTONS (SHOW "ALL" + ADMIN CATEGORIES)
 // =======================
-function renderSingleAllFilter() {
+function renderFilterButtons() {
   const container = document.querySelector(".filter-btns-container");
   if (!container) return;
+  const categories = ["All", ...new Set(products.map((p) => p.category).filter(Boolean))];
   container.innerHTML = "";
-  const btn = document.createElement("button");
-  btn.className = "filter-btn glass px-3 py-1 rounded bg-pink-600 text-white";
-  btn.textContent = "All";
-  btn.addEventListener("click", () => renderAllProducts());
-  container.appendChild(btn);
+  categories.forEach((cat) => {
+    const btn = document.createElement("button");
+    btn.className = `filter-btn glass px-3 py-1 rounded ${cat === "All" ? "bg-pink-600 text-white" : ""}`;
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("bg-pink-600", "text-white"));
+      btn.classList.add("bg-pink-600", "text-white");
+      renderProducts(cat);
+    });
+    container.appendChild(btn);
+  });
 }
 
 // =======================
-// DOMContentLoaded HANDLER
+// LOAD PRODUCTS FROM SERVER ONLY
+// =======================
+async function loadAdminProducts() {
+  try {
+    const res = await fetch("/products");
+    const adminProducts = await res.json();
+    products = adminProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      img: p.image || "public/images/placeholder.jpg",
+      description: p.description || ""
+    }));
+    renderFilterButtons();
+    renderProducts("All");
+  } catch (err) {
+    console.error("Error loading admin products:", err);
+  }
+}
+
+// =======================
+// DOMContentLoaded (as initializer)
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
-  renderSingleAllFilter();
-  loadProducts();
+  loadAdminProducts();
 
-  // Drawers
+  // Drawer toggles
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
   const checkoutBtn = document.getElementById("checkoutBtn");
@@ -206,6 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const orderData = {
         name: document.getElementById("custName").value,
         email: document.getElementById("custEmail").value,
@@ -218,6 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
         checkoutMsg.textContent = "⚠️ Cart is empty!";
         return;
       }
+
       try {
         const res = await fetch("/create-order", {
           method: "POST",
@@ -234,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
           name: "Heer Embroidery",
           description: "Order Payment",
           order_id: order.id,
-          handler: async function(response) {
+          handler: async function (response) {
             const verifyRes = await fetch("/verify-order", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -249,7 +269,11 @@ document.addEventListener("DOMContentLoaded", () => {
               checkoutMsg.textContent = "❌ Payment verification failed.";
             }
           },
-          prefill: { name: orderData.name, email: orderData.email, contact: orderData.phone },
+          prefill: {
+            name: orderData.name,
+            email: orderData.email,
+            contact: orderData.phone
+          },
           theme: { color: "#e11d48" }
         };
 
