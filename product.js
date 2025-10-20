@@ -1,35 +1,11 @@
 // =======================
-// GET PRODUCT FROM URL
+// PRODUCTS DATA
 // =======================
-const urlParams = new URLSearchParams(window.location.search);
-const productId = urlParams.get("id");
-
-// Example products (hardcoded)
 let products = [
   { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
   { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
   { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
 ];
-
-// =======================
-// DOM ELEMENTS
-// =======================
-const productImg = document.getElementById("productImg");
-const productName = document.getElementById("productName");
-const productPrice = document.getElementById("productPrice");
-const productDesc = document.getElementById("productDesc");
-const addCartBtn = document.getElementById("addCartBtn");
-const addWishlistBtn = document.getElementById("addWishlistBtn");
-const cartItems = document.getElementById("cartItems");
-const wishlistItems = document.getElementById("wishlistItems");
-const cartCount = document.getElementById("cartCount");
-const wishlistCount = document.getElementById("wishlistCount");
-const cartTotal = document.getElementById("cartTotal");
-
-// Drawers
-const cartDrawer = document.getElementById("cartDrawer");
-const wishlistDrawer = document.getElementById("wishlistDrawer");
-const checkoutDrawer = document.getElementById("checkoutDrawer");
 
 // =======================
 // CART & WISHLIST STORAGE
@@ -41,30 +17,26 @@ function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
 // =======================
-// SMALL POPUP MESSAGE FUNCTION
+// SMALL POPUP MESSAGE
 // =======================
 function showPopupMessage(message, color = "bg-green-600") {
   const popup = document.createElement("div");
   popup.textContent = message;
   popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
   document.body.appendChild(popup);
-
   setTimeout(() => {
     popup.classList.add("opacity-0", "transition", "duration-500");
     setTimeout(() => popup.remove(), 500);
   }, 1500);
 }
 
-// Add animation via CSS
 const style = document.createElement("style");
 style.innerHTML = `
 @keyframes slideIn {
   from { transform: translateY(-20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out;
-}
+.animate-slideIn { animation: slideIn 0.3s ease-out; }
 `;
 document.head.appendChild(style);
 
@@ -72,6 +44,9 @@ document.head.appendChild(style);
 // CART FUNCTIONS
 // =======================
 function renderCart() {
+  const cartItems = document.getElementById("cartItems");
+  const cartCount = document.getElementById("cartCount");
+  const cartTotal = document.getElementById("cartTotal");
   cartItems.innerHTML = "";
   let total = 0;
   cart.forEach(item => {
@@ -125,6 +100,8 @@ function updateCartQuantity(id, action) {
 // WISHLIST FUNCTIONS
 // =======================
 function renderWishlist() {
+  const wishlistItems = document.getElementById("wishlistItems");
+  const wishlistCount = document.getElementById("wishlistCount");
   wishlistItems.innerHTML = "";
   wishlist.forEach(item => {
     const div = document.createElement("div");
@@ -167,29 +144,61 @@ function removeFromWishlist(id) {
 // LOAD PRODUCT
 // =======================
 async function loadProduct() {
-  let allProducts = [...products];
+  const urlParams = new URLSearchParams(window.location.search);
+  const productId = urlParams.get("id");
+  const productContainer = document.getElementById("productContainer");
 
-  if (typeof firebase !== "undefined") {
-    const db = firebase.firestore();
-    const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
-  }
-
-  const product = allProducts.find(p => p.id == productId);
-  if (!product) {
-    alert("Product not found");
-    window.location.href = "index.html";
+  if (!productId) {
+    productContainer.innerHTML = "<p>Product not found.</p>";
     return;
   }
 
-  productImg.src = product.img;
-  productImg.alt = product.name;
-  productName.textContent = product.name;
-  productPrice.textContent = `₹${product.price}`;
-  productDesc.textContent = product.description;
+  // Check local products first
+  let product = products.find(p => p.id == productId);
 
-  addCartBtn.onclick = () => addToCart(product);
-  addWishlistBtn.onclick = () => addToWishlist(product);
+  // If not found, try fetching from Firestore / backend
+  if (!product && typeof firebase !== "undefined") {
+    try {
+      const db = firebase.firestore();
+      const snapshot = await db.collection("products").get();
+      snapshot.forEach(doc => products.push({ id: doc.id, ...doc.data() }));
+      product = products.find(p => p.id == productId);
+    } catch (err) {
+      console.error("Error fetching Firestore product:", err);
+    }
+  }
+
+  if (!product) {
+    try {
+      const res = await fetch(`/products/${productId}`);
+      if (res.ok) product = await res.json();
+    } catch (err) {
+      console.error("Error fetching backend product:", err);
+    }
+  }
+
+  if (!product) {
+    productContainer.innerHTML = "<p>Product not found.</p>";
+    return;
+  }
+
+  productContainer.innerHTML = `
+    <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+      <img src="${product.img}" alt="${product.name}" class="w-64 h-64 object-cover rounded-lg shadow-md">
+      <div class="text-left">
+        <h1 class="text-2xl font-bold mb-2">${product.name}</h1>
+        <p class="text-pink-600 text-xl font-semibold mb-4">₹${product.price}</p>
+        <p class="text-gray-700 mb-4">${product.description || "No description available."}</p>
+        <div class="flex gap-4">
+          <button id="addToCartBtn" class="bg-pink-600 text-white px-4 py-2 rounded">Add to Cart</button>
+          <button id="addToWishlistBtn" class="bg-gray-700 text-white px-4 py-2 rounded">Add to Wishlist</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("addToCartBtn").addEventListener("click", () => addToCart(product));
+  document.getElementById("addToWishlistBtn").addEventListener("click", () => addToWishlist(product));
 }
 
 // =======================
@@ -200,8 +209,10 @@ document.addEventListener("DOMContentLoaded", () => {
   renderWishlist();
   loadProduct();
 
-  const backShopBtn = document.getElementById("backShopBtn");
-  if (backShopBtn) backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+  // Drawer buttons
+  const cartDrawer = document.getElementById("cartDrawer");
+  const wishlistDrawer = document.getElementById("wishlistDrawer");
+  const checkoutDrawer = document.getElementById("checkoutDrawer");
 
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
@@ -220,15 +231,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
 
-  // =======================
   // Checkout form submit
-  // =======================
   const checkoutForm = document.getElementById("checkoutForm");
   const checkoutMsg = document.getElementById("checkoutMsg");
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const orderData = {
         name: document.getElementById("custName").value,
         email: document.getElementById("custEmail").value,
@@ -236,22 +244,12 @@ document.addEventListener("DOMContentLoaded", () => {
         address: document.getElementById("custAddress").value,
         items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
       };
-
       const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      if (amount <= 0) {
-        checkoutMsg.textContent = "⚠️ Cart is empty!";
-        return;
-      }
-
+      if (amount <= 0) return checkoutMsg.textContent = "⚠️ Cart is empty!";
       try {
-        const res = await fetch("/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount })
-        });
+        const res = await fetch("/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount }) });
         const order = await res.json();
         if (!order.id) throw new Error("Order not created");
-
         const options = {
           key: order.key,
           amount: order.amount,
@@ -260,28 +258,17 @@ document.addEventListener("DOMContentLoaded", () => {
           description: "Order Payment",
           order_id: order.id,
           handler: async function (response) {
-            const verifyRes = await fetch("/verify-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...response, orderData })
-            });
+            const verifyRes = await fetch("/verify-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...response, orderData }) });
             const verifyJson = await verifyRes.json();
             if (verifyJson.success) {
               checkoutMsg.textContent = "✅ Payment successful! Thank you.";
               cart = [];
               renderCart();
-            } else {
-              checkoutMsg.textContent = "❌ Payment verification failed.";
-            }
+            } else checkoutMsg.textContent = "❌ Payment verification failed.";
           },
-          prefill: {
-            name: orderData.name,
-            email: orderData.email,
-            contact: orderData.phone
-          },
+          prefill: { name: orderData.name, email: orderData.email, contact: orderData.phone },
           theme: { color: "#e11d48" }
         };
-
         const rzp = new Razorpay(options);
         rzp.open();
       } catch (err) {
