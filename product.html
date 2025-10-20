@@ -90,24 +90,22 @@
       <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
     </div>
   </div>
-  <!-- =======================
-CHECKOUT DRAWER
-======================= -->
-<div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
-  <div class="p-4 flex justify-between items-center border-b">
-    <h2 class="font-bold text-lg">Checkout</h2>
-    <button class="closeCheckout text-gray-500">✕</button>
-  </div>
-  <form id="checkoutForm" class="p-4 space-y-3">
-    <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
-    <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
-    <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
-    <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
-    <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
-    <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
-  </form>
-</div>
 
+  <!-- Checkout Drawer -->
+  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
+    <div class="p-4 flex justify-between items-center border-b">
+      <h2 class="font-bold text-lg">Checkout</h2>
+      <button class="closeCheckout text-gray-500">✕</button>
+    </div>
+    <form id="checkoutForm" class="p-4 space-y-3">
+      <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
+      <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
+      <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
+      <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
+      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
+      <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
+    </form>
+  </div>
 
   <!-- Wishlist Drawer -->
   <div id="wishlistDrawer" class="fixed top-0 left-0 w-80 h-full glass transform -translate-x-full transition p-4 flex flex-col z-50">
@@ -118,6 +116,23 @@ CHECKOUT DRAWER
     <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
   </div>
 
-  <script type="module" src="product.js"></script>
+  <!-- Firebase scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Dynamically load config from server -->
+  <script>
+    fetch("/firebase-key.json")
+      .then(response => response.json())
+      .then(config => {
+        firebase.initializeApp(config);
+        // Once Firebase initialized, load your product logic
+        const script = document.createElement('script');
+        script.type = "module";
+        script.src = "product.js";
+        document.body.appendChild(script);
+      })
+      .catch(err => console.error("Failed to load Firebase config:", err));
+  </script>
 </body>
 </html>

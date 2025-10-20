@@ -4,7 +4,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
-// Example products (hardcoded)
+// Example products (local fallback)
 let products = [
   { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
   { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
@@ -20,6 +20,7 @@ const productPrice = document.getElementById("productPrice");
 const productDesc = document.getElementById("productDesc");
 const addCartBtn = document.getElementById("addCartBtn");
 const addWishlistBtn = document.getElementById("addWishlistBtn");
+
 const cartItems = document.getElementById("cartItems");
 const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
@@ -41,7 +42,7 @@ function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
 // =======================
-// SMALL POPUP MESSAGE FUNCTION
+// SMALL POPUP FUNCTION
 // =======================
 function showPopupMessage(message, color = "bg-green-600") {
   const popup = document.createElement("div");
@@ -55,16 +56,13 @@ function showPopupMessage(message, color = "bg-green-600") {
   }, 1500);
 }
 
-// Add animation via CSS
 const style = document.createElement("style");
 style.innerHTML = `
 @keyframes slideIn {
   from { transform: translateY(-20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out;
-}
+.animate-slideIn { animation: slideIn 0.3s ease-out; }
 `;
 document.head.appendChild(style);
 
@@ -164,15 +162,20 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// LOAD PRODUCT
+// LOAD PRODUCT (wait until Firebase ready)
 // =======================
 async function loadProduct() {
   let allProducts = [...products];
 
-  if (typeof firebase !== "undefined") {
+  // Wait until Firebase is initialized and accessible
+  if (typeof firebase !== "undefined" && firebase.apps.length) {
     const db = firebase.firestore();
-    const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
+    try {
+      const snapshot = await db.collection("products").get();
+      snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.error("Error loading Firestore products:", err);
+    }
   }
 
   const product = allProducts.find(p => p.id == productId);
@@ -182,18 +185,18 @@ async function loadProduct() {
     return;
   }
 
-  productImg.src = product.img;
+  productImg.src = product.img || product.image || "public/images/placeholder.jpg";
   productImg.alt = product.name;
   productName.textContent = product.name;
   productPrice.textContent = `₹${product.price}`;
-  productDesc.textContent = product.description;
+  productDesc.textContent = product.description || "";
 
   addCartBtn.onclick = () => addToCart(product);
   addWishlistBtn.onclick = () => addToWishlist(product);
 }
 
 // =======================
-// INITIAL LOAD & EVENT LISTENERS
+// INITIAL LOAD & UI EVENTS
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
@@ -220,15 +223,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
 
-  // =======================
-  // Checkout form submit
-  // =======================
+  // Checkout form
   const checkoutForm = document.getElementById("checkoutForm");
   const checkoutMsg = document.getElementById("checkoutMsg");
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const orderData = {
         name: document.getElementById("custName").value,
         email: document.getElementById("custEmail").value,
@@ -236,7 +236,6 @@ document.addEventListener("DOMContentLoaded", () => {
         address: document.getElementById("custAddress").value,
         items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
       };
-
       const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
       if (amount <= 0) {
         checkoutMsg.textContent = "⚠️ Cart is empty!";
@@ -281,7 +280,6 @@ document.addEventListener("DOMContentLoaded", () => {
           },
           theme: { color: "#e11d48" }
         };
-
         const rzp = new Razorpay(options);
         rzp.open();
       } catch (err) {
