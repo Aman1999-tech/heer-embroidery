@@ -4,7 +4,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
-// Example products (hardcoded)
+// Default (fallback) products
 let products = [
   { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
   { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
@@ -25,8 +25,6 @@ const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
 const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
-
-// Drawers
 const cartDrawer = document.getElementById("cartDrawer");
 const wishlistDrawer = document.getElementById("wishlistDrawer");
 const checkoutDrawer = document.getElementById("checkoutDrawer");
@@ -41,30 +39,24 @@ function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
 
 // =======================
-// SMALL POPUP MESSAGE FUNCTION
+// POPUP UTILITY
 // =======================
 function showPopupMessage(message, color = "bg-green-600") {
   const popup = document.createElement("div");
   popup.textContent = message;
   popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
   document.body.appendChild(popup);
-
   setTimeout(() => {
     popup.classList.add("opacity-0", "transition", "duration-500");
     setTimeout(() => popup.remove(), 500);
   }, 1500);
 }
 
-// Add animation via CSS
+// Add popup animation style
 const style = document.createElement("style");
 style.innerHTML = `
-@keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out;
-}
+@keyframes slideIn { from {transform: translateY(-20px);opacity:0;} to {transform: translateY(0);opacity:1;} }
+.animate-slideIn {animation: slideIn 0.3s ease-out;}
 `;
 document.head.appendChild(style);
 
@@ -164,36 +156,52 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// LOAD PRODUCT
+// LOAD PRODUCT (from admin backend or fallback)
 // =======================
 async function loadProduct() {
-  let allProducts = [...products];
+  try {
+    let allProducts = [...products];
 
-  if (typeof firebase !== "undefined") {
-    const db = firebase.firestore();
-    const snapshot = await db.collection("products").get();
-    snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
+    // Fetch backend/admin products (same as app.js)
+    const res = await fetch("/products");
+    if (res.ok) {
+      const adminProducts = await res.json();
+      adminProducts.forEach(p => {
+        if (!allProducts.find(prod => prod.id == p.id)) {
+          allProducts.push({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            category: p.category,
+            img: p.image || "public/images/placeholder.jpg",
+            description: p.description || ""
+          });
+        }
+      });
+    }
+
+    const product = allProducts.find(p => p.id == productId);
+    if (!product) {
+      alert("Product not found");
+      window.location.href = "index.html";
+      return;
+    }
+
+    productImg.src = product.img;
+    productImg.alt = product.name;
+    productName.textContent = product.name;
+    productPrice.textContent = `₹${product.price}`;
+    productDesc.textContent = product.description;
+
+    addCartBtn.onclick = () => addToCart(product);
+    addWishlistBtn.onclick = () => addToWishlist(product);
+  } catch (err) {
+    console.error("Error loading product:", err);
   }
-
-  const product = allProducts.find(p => p.id == productId);
-  if (!product) {
-    alert("Product not found");
-    window.location.href = "index.html";
-    return;
-  }
-
-  productImg.src = product.img;
-  productImg.alt = product.name;
-  productName.textContent = product.name;
-  productPrice.textContent = `₹${product.price}`;
-  productDesc.textContent = product.description;
-
-  addCartBtn.onclick = () => addToCart(product);
-  addWishlistBtn.onclick = () => addToWishlist(product);
 }
 
 // =======================
-// INITIAL LOAD & EVENT LISTENERS
+// INITIAL LOAD & EVENTS
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
@@ -201,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProduct();
 
   const backShopBtn = document.getElementById("backShopBtn");
-  if (backShopBtn) backShopBtn.addEventListener("click", () => window.location.href = "index.html");
+  if (backShopBtn) backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
 
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
