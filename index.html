@@ -39,11 +39,6 @@
       transition: all 0.25s ease-in-out;
     }
 
-    /* ===================================
-       MOBILE LAYOUT FIXES
-       =================================== */
-
-    /* Make filter buttons container horizontally scrollable */
     .filter-btns-container {
       overflow-x: auto;
       white-space: nowrap;
@@ -63,7 +58,6 @@
       white-space: nowrap;
     }
 
-    /* Better grid on small devices */
     @media (max-width: 640px) {
       #productGrid {
         display: grid;
@@ -102,6 +96,9 @@
     class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-30 rounded-b-2xl">
     <h1 class="text-xl font-bold">Heer Embroidery</h1>
     <div class="flex gap-4">
+      <!-- ✅ Profile Button Added -->
+      <button id="profileBtn" class="relative">👤 Profile</button>
+
       <button id="wishlistBtn" class="relative">
         ❤️ Wishlist <span id="wishlistCount"
           class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
@@ -141,6 +138,23 @@
       <button class="closeWishlist">✖</button>
     </div>
     <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
+  </div>
+
+  <!-- ✅ Profile Drawer Added -->
+  <div id="profileDrawer"
+    class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-6 flex flex-col z-50">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Your Profile</h2>
+      <button class="closeProfile">✖</button>
+    </div>
+    <form id="profileForm" class="flex flex-col gap-3">
+      <input type="text" id="userName" placeholder="Full Name" class="border p-2 rounded" required>
+      <input type="email" id="userEmail" placeholder="Email" class="border p-2 rounded" required>
+      <input type="tel" id="userPhone" placeholder="Phone" class="border p-2 rounded" required>
+      <button type="submit" class="bg-pink-600 text-white py-2 rounded">Save Profile</button>
+      <p id="profileMsg" class="text-sm text-center text-gray-600 mt-2"></p>
+      <button id="logoutBtn" type="button" class="bg-gray-300 text-black py-2 rounded mt-2">Logout</button>
+    </form>
   </div>
 
   <!-- Checkout Drawer -->

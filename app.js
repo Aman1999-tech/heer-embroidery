@@ -5,6 +5,7 @@ let products = [];
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
 let currentFilter = "All";
+let userProfile = JSON.parse(localStorage.getItem("userProfile")) || null;
 
 // =======================
 // DOM ELEMENTS
@@ -13,6 +14,7 @@ const productGrid = document.getElementById("productGrid");
 const cartDrawer = document.getElementById("cartDrawer");
 const wishlistDrawer = document.getElementById("wishlistDrawer");
 const checkoutDrawer = document.getElementById("checkoutDrawer");
+const profileDrawer = document.getElementById("profileDrawer");
 const cartItems = document.getElementById("cartItems");
 const wishlistItems = document.getElementById("wishlistItems");
 const cartCount = document.getElementById("cartCount");
@@ -24,6 +26,19 @@ const cartTotal = document.getElementById("cartTotal");
 // =======================
 function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
+function saveProfile() { localStorage.setItem("userProfile", JSON.stringify(userProfile)); }
+
+// =======================
+// PROFILE CHECK HELPER
+// =======================
+function ensureProfile() {
+  if (!userProfile) {
+    alert("Please complete your profile before continuing.");
+    if (profileDrawer) profileDrawer.classList.remove("translate-x-full");
+    return false;
+  }
+  return true;
+}
 
 // =======================
 // CART FUNCTIONS
@@ -57,6 +72,7 @@ function renderCart() {
 }
 
 function addToCart(product) {
+  if (!ensureProfile()) return;
   const existing = cart.find(i => i.id === product.id);
   if (existing) existing.quantity++;
   else cart.push({ ...product, quantity: 1 });
@@ -105,6 +121,7 @@ function renderWishlist() {
 }
 
 function addToWishlist(product) {
+  if (!ensureProfile()) return;
   if (!wishlist.find(i => i.id === product.id)) wishlist.push(product);
   renderWishlist();
 }
@@ -146,7 +163,7 @@ function renderProducts(filter = "All") {
 }
 
 // =======================
-// FILTER BUTTONS (SHOW "ALL" + ADMIN CATEGORIES)
+// FILTER BUTTONS
 // =======================
 function renderFilterButtons() {
   const container = document.querySelector(".filter-btns-container");
@@ -168,7 +185,7 @@ function renderFilterButtons() {
 }
 
 // =======================
-// LOAD PRODUCTS FROM SERVER ONLY
+// LOAD PRODUCTS
 // =======================
 async function loadAdminProducts() {
   try {
@@ -190,7 +207,7 @@ async function loadAdminProducts() {
 }
 
 // =======================
-// DOMContentLoaded (as initializer)
+// DOMContentLoaded
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
@@ -201,21 +218,71 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartBtn = document.getElementById("cartBtn");
   const wishlistBtn = document.getElementById("wishlistBtn");
   const checkoutBtn = document.getElementById("checkoutBtn");
+  const profileBtn = document.getElementById("profileBtn");
   const closeCartBtn = document.querySelector(".closeCart");
   const closeWishlistBtn = document.querySelector(".closeWishlist");
   const closeCheckoutBtn = document.querySelector(".closeCheckout");
+  const closeProfileBtn = document.querySelector(".closeProfile");
 
-  cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
+  cartBtn.addEventListener("click", () => {
+    if (!ensureProfile()) return;
+    cartDrawer.classList.remove("translate-x-full");
+  });
   closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
 
-  wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
+  wishlistBtn.addEventListener("click", () => {
+    if (!ensureProfile()) return;
+    wishlistDrawer.classList.remove("-translate-x-full");
+  });
   closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
 
   checkoutBtn.addEventListener("click", () => {
+    if (!ensureProfile()) return;
     cartDrawer.classList.add("translate-x-full");
     checkoutDrawer.classList.remove("translate-x-full");
   });
   closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
+
+  // Profile drawer
+  if (profileBtn && profileDrawer) {
+    profileBtn.addEventListener("click", () => profileDrawer.classList.remove("translate-x-full"));
+  }
+  if (closeProfileBtn) closeProfileBtn.addEventListener("click", () => profileDrawer.classList.add("translate-x-full"));
+
+  // Profile form
+  const profileForm = document.getElementById("profileForm");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const profileMsg = document.getElementById("profileMsg");
+
+  if (profileForm) {
+    profileForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("userName").value.trim();
+      const email = document.getElementById("userEmail").value.trim();
+      const phone = document.getElementById("userPhone").value.trim();
+
+      if (!name || !email || !phone) {
+        profileMsg.textContent = "⚠️ Please fill all fields.";
+        return;
+      }
+
+      userProfile = { name, email, phone };
+      saveProfile();
+      profileMsg.textContent = "✅ Profile saved successfully!";
+      profileBtn.textContent = `👤 ${name}`;
+      setTimeout(() => profileDrawer.classList.add("translate-x-full"), 800);
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("userProfile");
+      userProfile = null;
+      alert("You have logged out.");
+      profileBtn.textContent = "👤 Profile";
+      profileDrawer.classList.add("translate-x-full");
+    });
+  }
 
   // Checkout form
   const checkoutForm = document.getElementById("checkoutForm");
@@ -224,6 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!ensureProfile()) return;
 
       const orderData = {
         name: document.getElementById("custName").value,
@@ -284,5 +352,11 @@ document.addEventListener("DOMContentLoaded", () => {
         checkoutMsg.textContent = "❌ Could not create order, please try again later.";
       }
     });
+  }
+
+  // If profile already exists, update button text
+  if (userProfile) {
+    const name = userProfile.name.split(" ")[0];
+    profileBtn.textContent = `👤 ${name}`;
   }
 });
