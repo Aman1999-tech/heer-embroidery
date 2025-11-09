@@ -40,12 +40,16 @@
   <!-- Header -->
   <header class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md">
     <h1 class="text-xl font-bold">Heer Embroidery</h1>
-    <div class="flex gap-4">
+    <div class="flex gap-4 items-center">
       <button id="wishlistBtn" class="relative">❤️ Wishlist
         <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
       </button>
       <button id="cartBtn" class="relative">🛒 Cart
         <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
+      </button>
+      <!-- ✅ Profile Button Added -->
+      <button id="profileBtn" class="relative flex items-center gap-1">
+        <i class="fa-solid fa-user"></i> <span>Profile</span>
       </button>
     </div>
   </header>
@@ -90,24 +94,22 @@
       <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
     </div>
   </div>
-  <!-- =======================
-CHECKOUT DRAWER
-======================= -->
-<div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
-  <div class="p-4 flex justify-between items-center border-b">
-    <h2 class="font-bold text-lg">Checkout</h2>
-    <button class="closeCheckout text-gray-500">✕</button>
-  </div>
-  <form id="checkoutForm" class="p-4 space-y-3">
-    <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
-    <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
-    <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
-    <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
-    <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
-    <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
-  </form>
-</div>
 
+  <!-- Checkout Drawer -->
+  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
+    <div class="p-4 flex justify-between items-center border-b">
+      <h2 class="font-bold text-lg">Checkout</h2>
+      <button class="closeCheckout text-gray-500">✕</button>
+    </div>
+    <form id="checkoutForm" class="p-4 space-y-3">
+      <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
+      <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
+      <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
+      <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
+      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
+      <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
+    </form>
+  </div>
 
   <!-- Wishlist Drawer -->
   <div id="wishlistDrawer" class="fixed top-0 left-0 w-80 h-full glass transform -translate-x-full transition p-4 flex flex-col z-50">
@@ -118,7 +120,31 @@ CHECKOUT DRAWER
     <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
   </div>
 
-   <!-- Footer -->
+  <!-- ✅ Profile Drawer Added -->
+  <div id="profileDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Your Profile</h2>
+      <button id="closeProfile" class="text-gray-600">✖</button>
+    </div>
+    <div id="profileContent" class="flex-1 overflow-y-auto">
+      <!-- Login form (shown when not logged in) -->
+      <div id="loginForm">
+        <input type="text" id="loginName" placeholder="Enter Name" class="w-full border p-2 rounded mb-2">
+        <input type="email" id="loginEmail" placeholder="Enter Email" class="w-full border p-2 rounded mb-2">
+        <input type="tel" id="loginPhone" placeholder="Enter Phone" class="w-full border p-2 rounded mb-4">
+        <button id="saveProfile" class="w-full bg-pink-600 text-white py-2 rounded">Save Profile</button>
+      </div>
+      <!-- Profile info (shown after login) -->
+      <div id="userProfile" class="hidden">
+        <p><strong>Name:</strong> <span id="userName"></span></p>
+        <p><strong>Email:</strong> <span id="userEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="userPhone"></span></p>
+        <button id="logoutBtn" class="mt-4 bg-red-500 text-white px-4 py-2 rounded w-full">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
   <footer class="glass text-center py-6 mt-10 text-gray-700 rounded-t-2xl shadow-inner">
     <p class="mb-3">
       © 2024 <span class="font-bold text-pink-700">Heer Embroidery</span>. All Rights Reserved.
