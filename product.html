@@ -17,6 +17,7 @@
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
       transition: all 0.25s ease-in-out;
     }
+
     #lightbox {
       display: none;
       position: fixed;
@@ -60,8 +61,8 @@
       <p id="productPrice" class="text-pink-600 font-bold text-xl"></p>
       <p id="productDesc" class="text-gray-700"></p>
       <div class="flex gap-2">
-        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add to Cart</button>
-        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded">♡ Wishlist</button>
+        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Add to Cart</button>
+        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded hover:bg-yellow-500 transition">♡ Wishlist</button>
       </div>
     </div>
   </main>
@@ -80,22 +81,22 @@
     <div id="cartItems" class="flex-1 overflow-y-auto"></div>
     <div class="mt-4">
       <p>Total: <span id="cartTotal" class="font-bold">₹0</span></p>
-      <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
+      <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">Checkout</button>
     </div>
   </div>
 
-  <!-- Checkout Drawer -->
-  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
-    <div class="p-4 flex justify-between items-center border-b">
+  <!-- ✅ Unified Checkout Drawer (same as index.html) -->
+  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition z-50">
+    <div class="p-4 flex justify-between items-center border-b bg-pink-600 text-white rounded-t-xl">
       <h2 class="font-bold text-lg">Checkout</h2>
-      <button class="closeCheckout text-gray-500">✕</button>
+      <button class="closeCheckout text-white">✕</button>
     </div>
     <form id="checkoutForm" class="p-4 space-y-3">
-      <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
-      <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
-      <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
-      <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
-      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
+      <input type="text" id="custName" placeholder="Full Name" class="w-full border p-2 rounded" required>
+      <input type="email" id="custEmail" placeholder="Email" class="w-full border p-2 rounded" required>
+      <input type="tel" id="custPhone" placeholder="Phone" class="w-full border p-2 rounded" required>
+      <textarea id="custAddress" placeholder="Address" class="w-full border p-2 rounded" required></textarea>
+      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full hover:bg-pink-700 transition">Pay Now</button>
       <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
     </form>
   </div>
@@ -112,46 +113,38 @@
   <!-- Footer placeholder -->
   <div id="footer-include"></div>
 
-  <!-- Inject header/footer, then load product.js -->
+  <!-- Inject Header/Footer + Logic -->
   <script>
-    (async function () {
-      async function inject(elId, file) {
-        const el = document.getElementById(elId);
-        const html = await fetch(file, { cache: 'no-cache' }).then(r => r.text());
-        el.innerHTML = html;
-      }
+    async function injectHTML(id, file) {
+      const el = document.getElementById(id);
+      const res = await fetch(file, { cache: 'no-cache' });
+      el.innerHTML = await res.text();
+    }
 
+    async function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.body.appendChild(s);
+      });
+    }
+
+    (async () => {
       try {
-        // Inject partials
-        await inject('header-include', './header.html');
-        await inject('footer-include', './footer.html');
-
-        // Load header/footer scripts
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = './header.js'; s.onload = res; s.onerror = rej;
-          document.body.appendChild(s);
-        });
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = './footer.js'; s.onload = res; s.onerror = rej;
-          document.body.appendChild(s);
-        });
-
-        // ✅ Load product.js only after header/footer exist
-        const p = document.createElement('script');
-        p.src = './product.js';
-        p.onload = () => {
-          // Fire event AFTER product.js is loaded, so listener inside it triggers
-          document.dispatchEvent(new CustomEvent('partials:loaded'));
-        };
-        document.body.appendChild(p);
-
-      } catch (e) {
-        console.error('Include failed:', e);
+        await injectHTML('header-include', './header.html');
+        await injectHTML('footer-include', './footer.html');
+        await loadScript('./header.js');
+        await loadScript('./footer.js');
+        document.dispatchEvent(new CustomEvent('partials:loaded'));
+      } catch (err) {
+        console.error("Include failed:", err);
       }
     })();
   </script>
 
+  <!-- Page Logic -->
+  <script src="./product.js"></script>
 </body>
 </html>
