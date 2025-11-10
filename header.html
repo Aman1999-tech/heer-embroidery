@@ -1,14 +1,42 @@
 <!-- header.html -->
 <header class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-30 rounded-b-2xl">
   <h1 class="text-xl font-bold">Heer Embroidery</h1>
-  <div class="flex gap-4">
+  <div class="flex gap-4 items-center">
+    <!-- Wishlist -->
     <button id="wishlistBtn" class="relative">
       ❤️ Wishlist
       <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
     </button>
+
+    <!-- Cart -->
     <button id="cartBtn" class="relative">
       🛒 Cart
       <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
     </button>
+
+    <!-- Profile -->
+    <button id="profileBtn" class="bg-white text-pink-600 font-semibold px-3 py-1 rounded hover:bg-pink-100 transition">
+      👤 Profile
+    </button>
   </div>
 </header>
+
+<!-- Profile Modal -->
+<div id="profileModal" class="fixed inset-0 bg-black/60 flex items-center justify-center hidden z-[9999]">
+  <div class="bg-white rounded-2xl shadow-xl w-80 p-6 relative">
+    <button id="closeProfileModal" class="absolute top-2 right-3 text-gray-500">✖</button>
+    <h2 class="text-xl font-bold text-center mb-4 text-pink-600">Your Profile</h2>
+
+    <div id="profileContent">
+      <input type="email" id="userEmail" placeholder="Email" class="w-full border p-2 rounded mb-2">
+      <input type="password" id="userPassword" placeholder="Password" class="w-full border p-2 rounded mb-3">
+      <button id="loginBtn" class="bg-pink-600 text-white w-full py-2 rounded mb-2">Login</button>
+      <button id="signupBtn" class="bg-gray-200 w-full py-2 rounded">Create Account</button>
+    </div>
+
+    <div id="userInfo" class="hidden text-center">
+      <p class="text-lg font-semibold mb-2 text-gray-700">Welcome, <span id="userName"></span></p>
+      <button id="logoutBtn" class="bg-pink-600 text-white w-full py-2 rounded">Logout</button>
+    </div>
+  </div>
+</div>
