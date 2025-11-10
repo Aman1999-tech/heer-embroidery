@@ -52,7 +52,6 @@ function showPopupMessage(message, color = "bg-green-600") {
   }, 1500);
 }
 
-// Add popup animation style
 const style = document.createElement("style");
 style.innerHTML = `
 @keyframes slideIn { from {transform: translateY(-20px);opacity:0;} to {transform: translateY(0);opacity:1;} }
@@ -156,7 +155,7 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// LOAD PRODUCT
+// LOAD PRODUCT (from backend or fallback)
 // =======================
 async function loadProduct() {
   try {
@@ -226,14 +225,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
 
-  // =======================
-  // CHECKOUT FORM SUBMIT
-  // =======================
+  // Checkout form submit
   const checkoutForm = document.getElementById("checkoutForm");
   const checkoutMsg = document.getElementById("checkoutMsg");
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const orderData = {
         name: document.getElementById("custName").value,
         email: document.getElementById("custEmail").value,
@@ -246,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         checkoutMsg.textContent = "⚠️ Cart is empty!";
         return;
       }
+
       try {
         const res = await fetch("/create-order", {
           method: "POST",
@@ -254,6 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const order = await res.json();
         if (!order.id) throw new Error("Order not created");
+
         const options = {
           key: order.key,
           amount: order.amount,
@@ -276,9 +276,14 @@ document.addEventListener("DOMContentLoaded", () => {
               checkoutMsg.textContent = "❌ Payment verification failed.";
             }
           },
-          prefill: { name: orderData.name, email: orderData.email, contact: orderData.phone },
+          prefill: {
+            name: orderData.name,
+            email: orderData.email,
+            contact: orderData.phone
+          },
           theme: { color: "#e11d48" }
         };
+
         const rzp = new Razorpay(options);
         rzp.open();
       } catch (err) {
@@ -287,64 +292,4 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
-  // =======================
-  // PROFILE LOGIC (NEW)
-  // =======================
-  const profileBtn = document.getElementById("profileBtn");
-  const profileDrawer = document.getElementById("profileDrawer");
-  const closeProfile = document.getElementById("closeProfile");
-  const loginForm = document.getElementById("loginForm");
-  const userProfile = document.getElementById("userProfile");
-  const saveProfile = document.getElementById("saveProfile");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  function loadProfile() {
-    const user = JSON.parse(localStorage.getItem("userProfile"));
-    if (user) {
-      document.getElementById("userName").textContent = user.name;
-      document.getElementById("userEmail").textContent = user.email;
-      document.getElementById("userPhone").textContent = user.phone;
-      loginForm.classList.add("hidden");
-      userProfile.classList.remove("hidden");
-    } else {
-      loginForm.classList.remove("hidden");
-      userProfile.classList.add("hidden");
-    }
-  }
-
-  if (profileBtn)
-    profileBtn.addEventListener("click", () => {
-      profileDrawer.classList.remove("translate-x-full");
-      loadProfile();
-    });
-
-  if (closeProfile)
-    closeProfile.addEventListener("click", () => {
-      profileDrawer.classList.add("translate-x-full");
-    });
-
-  if (saveProfile)
-    saveProfile.addEventListener("click", () => {
-      const user = {
-        name: document.getElementById("loginName").value,
-        email: document.getElementById("loginEmail").value,
-        phone: document.getElementById("loginPhone").value
-      };
-      if (!user.name || !user.email || !user.phone) {
-        showPopupMessage("⚠️ Please fill all fields", "bg-yellow-500");
-        return;
-      }
-      localStorage.setItem("userProfile", JSON.stringify(user));
-      showPopupMessage("✅ Profile saved!", "bg-green-600");
-      loadProfile();
-    });
-
-  if (logoutBtn)
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("userProfile");
-      showPopupMessage("🚪 Logged out!", "bg-gray-600");
-      loadProfile();
-    });
-
 });
