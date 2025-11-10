@@ -1,3 +1,5 @@
+// app.js
+
 // =======================
 // GLOBAL ARRAYS
 // =======================
@@ -15,8 +17,6 @@ const wishlistDrawer = document.getElementById("wishlistDrawer");
 const checkoutDrawer = document.getElementById("checkoutDrawer");
 const cartItems = document.getElementById("cartItems");
 const wishlistItems = document.getElementById("wishlistItems");
-const cartCount = document.getElementById("cartCount");
-const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
 
 // =======================
@@ -24,6 +24,16 @@ const cartTotal = document.getElementById("cartTotal");
 // =======================
 function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
 function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
+
+// =======================
+// HEADER BADGE UPDATES
+// =======================
+function updateHeaderCounts() {
+  const cartQty = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const wishQty = wishlist.length;
+  window.Header?.setCartCount(cartQty);
+  window.Header?.setWishlistCount(wishQty);
+}
 
 // =======================
 // CART FUNCTIONS
@@ -51,15 +61,17 @@ function renderCart() {
     div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
     cartItems.appendChild(div);
   });
-  cartCount.textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
   cartTotal.textContent = `₹${total}`;
   saveCart();
+  updateHeaderCounts();
 }
 
 function addToCart(product) {
   const existing = cart.find(i => i.id === product.id);
   if (existing) existing.quantity++;
   else cart.push({ ...product, quantity: 1 });
+
+  // If also in wishlist, remove it
   wishlist = wishlist.filter(i => i.id !== product.id);
   saveWishlist();
   renderWishlist();
@@ -100,8 +112,8 @@ function renderWishlist() {
     div.querySelector(".removeWishlist").addEventListener("click", () => removeFromWishlist(item.id));
     wishlistItems.appendChild(div);
   });
-  wishlistCount.textContent = wishlist.length;
   saveWishlist();
+  updateHeaderCounts();
 }
 
 function addToWishlist(product) {
@@ -121,11 +133,7 @@ function renderProducts(filter = "All") {
   currentFilter = filter;
   productGrid.innerHTML = "";
 
-  const filtered =
-    filter === "All"
-      ? products
-      : products.filter((p) => p.category === filter);
-
+  const filtered = filter === "All" ? products : products.filter((p) => p.category === filter);
   if (!filtered.length) {
     productGrid.innerHTML = `<p class="col-span-3 text-center text-gray-500">No products available</p>`;
     return;
@@ -133,8 +141,7 @@ function renderProducts(filter = "All") {
 
   filtered.forEach((product) => {
     const card = document.createElement("div");
-    card.className =
-      "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
+    card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
     card.innerHTML = `
       <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
       <h3 class="font-semibold">${product.name}</h3>
@@ -146,7 +153,7 @@ function renderProducts(filter = "All") {
 }
 
 // =======================
-// FILTER BUTTONS (SHOW "ALL" + ADMIN CATEGORIES)
+// FILTER BUTTONS
 // =======================
 function renderFilterButtons() {
   const container = document.querySelector(".filter-btns-container");
@@ -168,7 +175,7 @@ function renderFilterButtons() {
 }
 
 // =======================
-// LOAD PRODUCTS FROM SERVER ONLY
+// LOAD PRODUCTS FROM SERVER
 // =======================
 async function loadAdminProducts() {
   try {
@@ -190,37 +197,25 @@ async function loadAdminProducts() {
 }
 
 // =======================
-// DOMContentLoaded (as initializer)
+// DOMContentLoaded
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
   loadAdminProducts();
 
-  // Drawer toggles
-  const cartBtn = document.getElementById("cartBtn");
-  const wishlistBtn = document.getElementById("wishlistBtn");
+  // Checkout drawer only (cart/wishlist handled by header.js)
   const checkoutBtn = document.getElementById("checkoutBtn");
-  const closeCartBtn = document.querySelector(".closeCart");
-  const closeWishlistBtn = document.querySelector(".closeWishlist");
   const closeCheckoutBtn = document.querySelector(".closeCheckout");
-
-  cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
-  closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
-
-  wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
-  closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
-
-  checkoutBtn.addEventListener("click", () => {
+  checkoutBtn?.addEventListener("click", () => {
     cartDrawer.classList.add("translate-x-full");
     checkoutDrawer.classList.remove("translate-x-full");
   });
-  closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
+  closeCheckoutBtn?.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
 
-  // Checkout form
+  // Checkout form + Razorpay
   const checkoutForm = document.getElementById("checkoutForm");
   const checkoutMsg = document.getElementById("checkoutMsg");
-
   if (checkoutForm) {
     checkoutForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -286,3 +281,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// If header/footer load after app.js, sync counts again
+document.addEventListener('partials:loaded', updateHeaderCounts);
