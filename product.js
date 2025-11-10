@@ -1,25 +1,21 @@
 // =======================
-// product.js - Product Detail Page
+// product.js - Product Detail Page (uses shared header.js)
 // =======================
 
-// -----------------------
-// Get product ID
-// -----------------------
+// Get product ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
-// -----------------------
-// Default Fallback Products
-// -----------------------
+// Fallback data if backend is offline
 const fallbackProducts = [
   { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
   { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
   { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
 ];
 
-// -----------------------
-// Load Product Data
-// -----------------------
+// =======================
+// LOAD PRODUCT DETAILS
+// =======================
 async function loadProduct() {
   try {
     let allProducts = [...fallbackProducts];
@@ -47,28 +43,27 @@ async function loadProduct() {
       return;
     }
 
-    // Populate product details
+    // Display product data
     document.getElementById("productImg").src = product.img;
     document.getElementById("productName").textContent = product.name;
     document.getElementById("productPrice").textContent = `₹${product.price}`;
     document.getElementById("productDesc").textContent = product.description;
 
-    // Attach global cart/wishlist actions
+    // Button actions using global Header
     document.getElementById("addCartBtn").onclick = () => Header.addToCart(product);
     document.getElementById("addWishlistBtn").onclick = () => Header.addToWishlist(product);
 
-    // Back to shop
     const backShopBtn = document.getElementById("backShopBtn");
-    if (backShopBtn) backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
-
+    if (backShopBtn)
+      backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
   } catch (err) {
     console.error("Error loading product:", err);
   }
 }
 
-// -----------------------
-// Initialize after header/footer loaded
-// -----------------------
+// =======================
+// INIT (after header/footer loaded)
+// =======================
 document.addEventListener("partials:loaded", () => {
   loadProduct();
   Header.updateCounts();

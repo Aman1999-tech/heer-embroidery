@@ -1,30 +1,29 @@
 // =======================
-// app.js - Home Page Logic
+// app.js - Home Page Logic (uses shared header.js)
 // =======================
 
-// -----------------------
-// Globals
-// -----------------------
 let products = [];
 let currentFilter = "All";
 const productGrid = document.getElementById("productGrid");
 
-// -----------------------
-// Render Product Cards
-// -----------------------
+// =======================
+// RENDER PRODUCTS
+// =======================
 function renderProducts(filter = "All") {
   currentFilter = filter;
   productGrid.innerHTML = "";
 
   const filtered = filter === "All" ? products : products.filter(p => p.category === filter);
   if (!filtered.length) {
-    productGrid.innerHTML = `<p class="text-center text-gray-500">No products available</p>`;
+    productGrid.innerHTML = `<p class="text-center text-gray-500 col-span-3">No products available</p>`;
     return;
   }
 
   filtered.forEach(product => {
     const card = document.createElement("div");
-    card.className = "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
+    card.className =
+      "glass rounded-2xl p-4 flex flex-col items-center text-center hover:shadow-lg transition cursor-pointer";
+
     card.innerHTML = `
       <img src="${product.img}" alt="${product.name}" class="w-40 h-40 object-cover rounded-lg mb-3">
       <h3 class="font-semibold">${product.name}</h3>
@@ -35,24 +34,29 @@ function renderProducts(filter = "All") {
       </div>
     `;
 
-    // Add events
+    // Button functionality using global Header
     card.querySelector(".addCart").addEventListener("click", (e) => {
       e.stopPropagation();
       Header.addToCart(product);
     });
+
     card.querySelector(".addWish").addEventListener("click", (e) => {
       e.stopPropagation();
       Header.addToWishlist(product);
     });
-    card.addEventListener("click", () => window.location.href = `product.html?id=${product.id}`);
+
+    // Navigate to product detail
+    card.addEventListener("click", () => {
+      window.location.href = `product.html?id=${product.id}`;
+    });
 
     productGrid.appendChild(card);
   });
 }
 
-// -----------------------
-// Category Filters
-// -----------------------
+// =======================
+// FILTER BUTTONS
+// =======================
 function renderFilterButtons() {
   const container = document.querySelector(".filter-btns-container");
   if (!container) return;
@@ -63,7 +67,6 @@ function renderFilterButtons() {
   categories.forEach(cat => {
     const btn = document.createElement("button");
     btn.className = `filter-btn glass px-3 py-1 rounded ${cat === "All" ? "bg-pink-600 text-white" : ""}`;
-    btn.dataset.cat = cat;
     btn.textContent = cat;
 
     btn.addEventListener("click", () => {
@@ -76,9 +79,9 @@ function renderFilterButtons() {
   });
 }
 
-// -----------------------
-// Load Products
-// -----------------------
+// =======================
+// LOAD PRODUCTS FROM SERVER
+// =======================
 async function loadProducts() {
   try {
     const res = await fetch("/products");
@@ -92,16 +95,16 @@ async function loadProducts() {
       description: p.description || ""
     }));
     renderFilterButtons();
-    renderProducts();
+    renderProducts("All");
   } catch (err) {
     console.error("Error loading products:", err);
   }
 }
 
-// -----------------------
-// Init
-// -----------------------
+// =======================
+// INIT (after header/footer loaded)
+// =======================
 document.addEventListener("partials:loaded", () => {
   loadProducts();
-  Header.updateCounts();
+  Header.updateCounts(); // sync badge counts
 });

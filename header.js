@@ -1,14 +1,19 @@
-// ===========================================
-// header.js - Global Cart, Wishlist, Checkout Logic
-// ===========================================
-
+// =======================================
+// header.js - Shared Cart, Wishlist, Checkout Logic
+// =======================================
 (function () {
   if (window.__HEADER_INIT__) return;
   window.__HEADER_INIT__ = true;
 
-  // -------------------------------
-  // DOM Helpers
-  // -------------------------------
+  // =======================
+  // GLOBAL STATE
+  // =======================
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+
+  // =======================
+  // DOM HELPERS
+  // =======================
   const $ = (id) => document.getElementById(id);
 
   const cartDrawer = $("cartDrawer");
@@ -17,43 +22,41 @@
   const cartItems = $("cartItems");
   const wishlistItems = $("wishlistItems");
   const cartTotal = $("cartTotal");
+  const checkoutForm = $("checkoutForm");
   const checkoutMsg = $("checkoutMsg");
 
-  // -------------------------------
-  // LocalStorage
-  // -------------------------------
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-
-  const saveCart = () => localStorage.setItem("cart", JSON.stringify(cart));
-  const saveWishlist = () => localStorage.setItem("wishlist", JSON.stringify(wishlist));
-
-  // -------------------------------
-  // Utility: Show popup messages
-  // -------------------------------
-  function showPopup(msg, color = "bg-green-600") {
-    const popup = document.createElement("div");
-    popup.textContent = msg;
-    popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
-    document.body.appendChild(popup);
-    setTimeout(() => popup.remove(), 1500);
+  // =======================
+  // STORAGE HELPERS
+  // =======================
+  function saveCart() {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }
+  function saveWishlist() {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
   }
 
-  // -------------------------------
-  // Update counts on header buttons
-  // -------------------------------
-  function updateCounts() {
+  // =======================
+  // HEADER BADGE COUNTS
+  // =======================
+  function updateHeaderCounts() {
     const cartQty = cart.reduce((sum, i) => sum + i.quantity, 0);
     const wishQty = wishlist.length;
-    const cartCount = $("cartCount");
-    const wishlistCount = $("wishlistCount");
-    if (cartCount) cartCount.textContent = cartQty;
-    if (wishlistCount) wishlistCount.textContent = wishQty;
+    setCartCount(cartQty);
+    setWishlistCount(wishQty);
   }
 
-  // -------------------------------
-  // Render Cart
-  // -------------------------------
+  function setCartCount(n) {
+    const el = $("cartCount");
+    if (el) el.textContent = String(n || 0);
+  }
+  function setWishlistCount(n) {
+    const el = $("wishlistCount");
+    if (el) el.textContent = String(n || 0);
+  }
+
+  // =======================
+  // CART FUNCTIONS
+  // =======================
   function renderCart() {
     if (!cartItems) return;
     cartItems.innerHTML = "";
@@ -73,23 +76,47 @@
           <button class="bg-gray-300 px-2 rounded increase">+</button>
           <span>${item.quantity}</span>
           <button class="bg-gray-300 px-2 rounded decrease">-</button>
-        </div>`;
-      div.querySelector(".increase").onclick = () => updateQuantity(item.id, "increase");
-      div.querySelector(".decrease").onclick = () => updateQuantity(item.id, "decrease");
+        </div>
+      `;
+      div.querySelector(".increase").addEventListener("click", () => updateCartQuantity(item.id, "increase"));
+      div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
       cartItems.appendChild(div);
     });
 
-    cartTotal.textContent = `₹${total}`;
+    if (cartTotal) cartTotal.textContent = `₹${total}`;
     saveCart();
-    updateCounts();
+    updateHeaderCounts();
   }
 
-  // -------------------------------
-  // Render Wishlist
-  // -------------------------------
+  function addToCart(product) {
+    const existing = cart.find(i => i.id === product.id);
+    if (existing) existing.quantity++;
+    else cart.push({ ...product, quantity: 1 });
+
+    wishlist = wishlist.filter(i => i.id !== product.id);
+    saveWishlist();
+    renderWishlist();
+    renderCart();
+  }
+
+  function updateCartQuantity(id, action) {
+    cart = cart.map(item => {
+      if (item.id === id) {
+        if (action === "increase") item.quantity++;
+        if (action === "decrease") item.quantity--;
+      }
+      return item;
+    }).filter(i => i.quantity > 0);
+    renderCart();
+  }
+
+  // =======================
+  // WISHLIST FUNCTIONS
+  // =======================
   function renderWishlist() {
     if (!wishlistItems) return;
     wishlistItems.innerHTML = "";
+
     wishlist.forEach(item => {
       const div = document.createElement("div");
       div.className = "flex justify-between items-center mb-3 border-b pb-2";
@@ -102,41 +129,20 @@
         <div class="flex flex-col gap-1">
           <button class="bg-green-600 text-white px-2 rounded moveCart">Move to Cart</button>
           <button class="bg-red-500 text-white px-2 rounded removeWishlist">Remove</button>
-        </div>`;
-      div.querySelector(".moveCart").onclick = () => addToCart(item);
-      div.querySelector(".removeWishlist").onclick = () => removeFromWishlist(item.id);
+        </div>
+      `;
+      div.querySelector(".moveCart").addEventListener("click", () => addToCart(item));
+      div.querySelector(".removeWishlist").addEventListener("click", () => removeFromWishlist(item.id));
       wishlistItems.appendChild(div);
     });
-    saveWishlist();
-    updateCounts();
-  }
 
-  // -------------------------------
-  // Add / Remove Logic
-  // -------------------------------
-  function addToCart(product) {
-    const existing = cart.find(i => i.id === product.id);
-    if (existing) {
-      showPopup("⚠️ Already in cart!", "bg-yellow-500");
-      return;
-    }
-    cart.push({ ...product, quantity: 1 });
-    wishlist = wishlist.filter(i => i.id !== product.id);
     saveWishlist();
-    renderWishlist();
-    renderCart();
-    showPopup("✅ Added to cart!");
+    updateHeaderCounts();
   }
 
   function addToWishlist(product) {
-    if (wishlist.find(i => i.id === product.id)) {
-      showPopup("⚠️ Already in wishlist!", "bg-yellow-500");
-      return;
-    }
-    wishlist.push(product);
-    saveWishlist();
+    if (!wishlist.find(i => i.id === product.id)) wishlist.push(product);
     renderWishlist();
-    showPopup("💖 Added to wishlist!", "bg-pink-600");
   }
 
   function removeFromWishlist(id) {
@@ -144,24 +150,34 @@
     renderWishlist();
   }
 
-  function updateQuantity(id, action) {
-    cart = cart.map(item => {
-      if (item.id === id) {
-        if (action === "increase") item.quantity++;
-        if (action === "decrease") item.quantity--;
-      }
-      return item;
-    }).filter(i => i.quantity > 0);
-    renderCart();
+  // =======================
+  // CHECKOUT FUNCTIONS
+  // =======================
+  function openCheckout() {
+    if (cartDrawer && checkoutDrawer) {
+      cartDrawer.classList.add("translate-x-full");
+      checkoutDrawer.classList.remove("translate-x-full");
+    }
   }
 
-  // -------------------------------
-  // Checkout Logic
-  // -------------------------------
-  async function checkout() {
+  function closeCheckout() {
+    if (checkoutDrawer) checkoutDrawer.classList.add("translate-x-full");
+  }
+
+  async function handleCheckout(e) {
+    e.preventDefault();
+
+    const orderData = {
+      name: $("custName")?.value,
+      email: $("custEmail")?.value,
+      phone: $("custPhone")?.value,
+      address: $("custAddress")?.value,
+      items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
+    };
+
     const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
     if (amount <= 0) {
-      checkoutMsg.textContent = "⚠️ Cart is empty!";
+      if (checkoutMsg) checkoutMsg.textContent = "⚠️ Cart is empty!";
       return;
     }
 
@@ -171,6 +187,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount })
       });
+
       const order = await res.json();
       if (!order.id) throw new Error("Order not created");
 
@@ -185,16 +202,21 @@
           const verifyRes = await fetch("/verify-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response })
+            body: JSON.stringify({ ...response, orderData })
           });
           const verifyJson = await verifyRes.json();
           if (verifyJson.success) {
-            checkoutMsg.textContent = "✅ Payment successful! Thank you.";
+            if (checkoutMsg) checkoutMsg.textContent = "✅ Payment successful! Thank you.";
             cart = [];
             renderCart();
           } else {
-            checkoutMsg.textContent = "❌ Payment verification failed.";
+            if (checkoutMsg) checkoutMsg.textContent = "❌ Payment verification failed.";
           }
+        },
+        prefill: {
+          name: orderData.name,
+          email: orderData.email,
+          contact: orderData.phone
         },
         theme: { color: "#e11d48" }
       };
@@ -203,52 +225,53 @@
       rzp.open();
     } catch (err) {
       console.error(err);
-      checkoutMsg.textContent = "❌ Could not create order, please try again later.";
+      if (checkoutMsg) checkoutMsg.textContent = "❌ Could not create order, please try again later.";
     }
   }
 
-  // -------------------------------
-  // Drawer Controls
-  // -------------------------------
-  function initDrawers() {
+  // =======================
+  // INIT
+  // =======================
+  function init() {
+    // Drawer controls
     const cartBtn = $("cartBtn");
     const wishlistBtn = $("wishlistBtn");
-    const closeCart = document.querySelector(".closeCart");
-    const closeWishlist = document.querySelector(".closeWishlist");
-    const closeCheckout = document.querySelector(".closeCheckout");
+    const closeCartBtn = document.querySelector(".closeCart");
+    const closeWishlistBtn = document.querySelector(".closeWishlist");
     const checkoutBtn = $("checkoutBtn");
+    const closeCheckoutBtn = document.querySelector(".closeCheckout");
 
     cartBtn?.addEventListener("click", () => cartDrawer?.classList.remove("translate-x-full"));
     wishlistBtn?.addEventListener("click", () => wishlistDrawer?.classList.remove("-translate-x-full"));
-    closeCart?.addEventListener("click", () => cartDrawer?.classList.add("translate-x-full"));
-    closeWishlist?.addEventListener("click", () => wishlistDrawer?.classList.add("-translate-x-full"));
-    closeCheckout?.addEventListener("click", () => checkoutDrawer?.classList.add("translate-x-full"));
+    closeCartBtn?.addEventListener("click", () => cartDrawer?.classList.add("translate-x-full"));
+    closeWishlistBtn?.addEventListener("click", () => wishlistDrawer?.classList.add("-translate-x-full"));
 
-    checkoutBtn?.addEventListener("click", () => {
-      cartDrawer.classList.add("translate-x-full");
-      checkoutDrawer.classList.remove("translate-x-full");
-      checkout();
-    });
-  }
+    checkoutBtn?.addEventListener("click", openCheckout);
+    closeCheckoutBtn?.addEventListener("click", closeCheckout);
 
-  // -------------------------------
-  // Initialization
-  // -------------------------------
-  function init() {
-    initDrawers();
+    if (checkoutForm) checkoutForm.addEventListener("submit", handleCheckout);
+
     renderCart();
     renderWishlist();
+    updateHeaderCounts();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 
-  // Expose globally for product/app pages
+  // =======================
+  // EXPOSE GLOBAL API
+  // =======================
   window.Header = {
     addToCart,
     addToWishlist,
     renderCart,
     renderWishlist,
-    updateCounts
+    updateCounts: updateHeaderCounts,
+    setCartCount,
+    setWishlistCount
   };
 })();
