@@ -112,7 +112,7 @@
   <!-- Footer placeholder -->
   <div id="footer-include"></div>
 
-  <!-- Inject header/footer -->
+  <!-- Inject header/footer, then load product.js -->
   <script>
     (async function () {
       async function inject(elId, file) {
@@ -120,11 +120,13 @@
         const html = await fetch(file, { cache: 'no-cache' }).then(r => r.text());
         el.innerHTML = html;
       }
+
       try {
+        // Inject partials
         await inject('header-include', './header.html');
         await inject('footer-include', './footer.html');
 
-        // Load shared header/footer logic
+        // Load header/footer scripts
         await new Promise((res, rej) => {
           const s = document.createElement('script');
           s.src = './header.js'; s.onload = res; s.onerror = rej;
@@ -136,14 +138,20 @@
           document.body.appendChild(s);
         });
 
-        document.dispatchEvent(new CustomEvent('partials:loaded'));
+        // ✅ Load product.js only after header/footer exist
+        const p = document.createElement('script');
+        p.src = './product.js';
+        p.onload = () => {
+          // Fire event AFTER product.js is loaded, so listener inside it triggers
+          document.dispatchEvent(new CustomEvent('partials:loaded'));
+        };
+        document.body.appendChild(p);
+
       } catch (e) {
         console.error('Include failed:', e);
       }
     })();
   </script>
 
-  <!-- Page Logic -->
-  <script src="./product.js"></script>
 </body>
 </html>
