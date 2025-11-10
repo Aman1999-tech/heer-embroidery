@@ -4,12 +4,31 @@
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
-// Default (fallback) products
+// Fallback sample products
 let products = [
   { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
   { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
   { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
 ];
+
+// =======================
+// GLOBAL ARRAYS
+// =======================
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+
+// =======================
+// HELPERS
+// =======================
+function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
+function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
+
+function updateHeaderCounts() {
+  const cartQty = cart.reduce((s, i) => s + i.quantity, 0);
+  const wishQty = wishlist.length;
+  window.Header?.setCartCount(cartQty);
+  window.Header?.setWishlistCount(wishQty);
+}
 
 // =======================
 // DOM ELEMENTS
@@ -22,45 +41,24 @@ const addCartBtn = document.getElementById("addCartBtn");
 const addWishlistBtn = document.getElementById("addWishlistBtn");
 const cartItems = document.getElementById("cartItems");
 const wishlistItems = document.getElementById("wishlistItems");
-const cartCount = document.getElementById("cartCount");
-const wishlistCount = document.getElementById("wishlistCount");
 const cartTotal = document.getElementById("cartTotal");
 const cartDrawer = document.getElementById("cartDrawer");
 const wishlistDrawer = document.getElementById("wishlistDrawer");
 const checkoutDrawer = document.getElementById("checkoutDrawer");
 
 // =======================
-// CART & WISHLIST STORAGE
-// =======================
-let cart = JSON.parse(localStorage.getItem("cart")) || [];
-let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-
-function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); }
-function saveWishlist() { localStorage.setItem("wishlist", JSON.stringify(wishlist)); }
-
-// =======================
-// POPUP UTILITY
+// POPUP
 // =======================
 function showPopupMessage(message, color = "bg-green-600") {
   const popup = document.createElement("div");
   popup.textContent = message;
   popup.className = `${color} text-white px-4 py-2 rounded shadow-lg fixed top-6 right-6 z-[9999] animate-slideIn`;
   document.body.appendChild(popup);
-  setTimeout(() => {
-    popup.classList.add("opacity-0", "transition", "duration-500");
-    setTimeout(() => popup.remove(), 500);
-  }, 1500);
+  setTimeout(() => popup.remove(), 1500);
 }
 
-const style = document.createElement("style");
-style.innerHTML = `
-@keyframes slideIn { from {transform: translateY(-20px);opacity:0;} to {transform: translateY(0);opacity:1;} }
-.animate-slideIn {animation: slideIn 0.3s ease-out;}
-`;
-document.head.appendChild(style);
-
 // =======================
-// CART FUNCTIONS
+// CART / WISHLIST LOGIC
 // =======================
 function renderCart() {
   cartItems.innerHTML = "";
@@ -79,15 +77,14 @@ function renderCart() {
         <button class="bg-gray-300 px-2 rounded increase">+</button>
         <span>${item.quantity}</span>
         <button class="bg-gray-300 px-2 rounded decrease">-</button>
-      </div>
-    `;
-    div.querySelector(".increase").addEventListener("click", () => updateCartQuantity(item.id, "increase"));
-    div.querySelector(".decrease").addEventListener("click", () => updateCartQuantity(item.id, "decrease"));
+      </div>`;
+    div.querySelector(".increase").onclick = () => updateCartQuantity(item.id, "increase");
+    div.querySelector(".decrease").onclick = () => updateCartQuantity(item.id, "decrease");
     cartItems.appendChild(div);
   });
-  cartCount.textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
   cartTotal.textContent = `₹${total}`;
   saveCart();
+  updateHeaderCounts();
 }
 
 function addToCart(product) {
@@ -98,7 +95,7 @@ function addToCart(product) {
   renderWishlist();
   renderCart();
   saveWishlist();
-  showPopupMessage("✅ Product added to cart!");
+  showPopupMessage("✅ Added to cart!");
 }
 
 function updateCartQuantity(id, action) {
@@ -112,9 +109,6 @@ function updateCartQuantity(id, action) {
   renderCart();
 }
 
-// =======================
-// WISHLIST FUNCTIONS
-// =======================
 function renderWishlist() {
   wishlistItems.innerHTML = "";
   wishlist.forEach(item => {
@@ -129,21 +123,20 @@ function renderWishlist() {
       <div class="flex flex-col gap-1">
         <button class="bg-green-600 text-white px-2 rounded moveCart">Move to Cart</button>
         <button class="bg-red-500 text-white px-2 rounded removeWishlist">Remove</button>
-      </div>
-    `;
-    div.querySelector(".moveCart").addEventListener("click", () => addToCart(item));
-    div.querySelector(".removeWishlist").addEventListener("click", () => removeFromWishlist(item.id));
+      </div>`;
+    div.querySelector(".moveCart").onclick = () => addToCart(item);
+    div.querySelector(".removeWishlist").onclick = () => removeFromWishlist(item.id);
     wishlistItems.appendChild(div);
   });
-  wishlistCount.textContent = wishlist.length;
   saveWishlist();
+  updateHeaderCounts();
 }
 
 function addToWishlist(product) {
   if (!wishlist.find(i => i.id === product.id)) {
     wishlist.push(product);
     renderWishlist();
-    showPopupMessage("💖 Product added to wishlist!", "bg-pink-600");
+    showPopupMessage("💖 Added to wishlist!", "bg-pink-600");
   } else {
     showPopupMessage("⚠️ Already in wishlist!", "bg-yellow-500");
   }
@@ -155,141 +148,42 @@ function removeFromWishlist(id) {
 }
 
 // =======================
-// LOAD PRODUCT (from backend or fallback)
+// LOAD PRODUCT DETAILS
 // =======================
 async function loadProduct() {
   try {
     let allProducts = [...products];
     const res = await fetch("/products");
     if (res.ok) {
-      const adminProducts = await res.json();
-      adminProducts.forEach(p => {
-        if (!allProducts.find(prod => prod.id == p.id)) {
-          allProducts.push({
-            id: p.id,
-            name: p.name,
-            price: p.price,
-            category: p.category,
-            img: p.image || "public/images/placeholder.jpg",
-            description: p.description || ""
-          });
-        }
-      });
+      const data = await res.json();
+      allProducts.push(...data.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        img: p.image || "public/images/placeholder.jpg",
+        description: p.description || ""
+      })));
     }
-
     const product = allProducts.find(p => p.id == productId);
-    if (!product) {
-      alert("Product not found");
-      window.location.href = "index.html";
-      return;
-    }
-
+    if (!product) return (window.location.href = "index.html");
     productImg.src = product.img;
-    productImg.alt = product.name;
     productName.textContent = product.name;
     productPrice.textContent = `₹${product.price}`;
     productDesc.textContent = product.description;
-
     addCartBtn.onclick = () => addToCart(product);
     addWishlistBtn.onclick = () => addToWishlist(product);
-  } catch (err) {
-    console.error("Error loading product:", err);
+  } catch (e) {
+    console.error(e);
   }
 }
 
 // =======================
-// INITIAL LOAD & EVENTS
+// INIT
 // =======================
 document.addEventListener("DOMContentLoaded", () => {
   renderCart();
   renderWishlist();
   loadProduct();
-
-  const backShopBtn = document.getElementById("backShopBtn");
-  if (backShopBtn) backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
-
-  const cartBtn = document.getElementById("cartBtn");
-  const wishlistBtn = document.getElementById("wishlistBtn");
-  const checkoutBtn = document.getElementById("checkoutBtn");
-  const closeCartBtn = document.querySelector(".closeCart");
-  const closeWishlistBtn = document.querySelector(".closeWishlist");
-  const closeCheckoutBtn = document.querySelector(".closeCheckout");
-
-  if (cartBtn) cartBtn.addEventListener("click", () => cartDrawer.classList.remove("translate-x-full"));
-  if (closeCartBtn) closeCartBtn.addEventListener("click", () => cartDrawer.classList.add("translate-x-full"));
-  if (wishlistBtn) wishlistBtn.addEventListener("click", () => wishlistDrawer.classList.remove("-translate-x-full"));
-  if (closeWishlistBtn) closeWishlistBtn.addEventListener("click", () => wishlistDrawer.classList.add("-translate-x-full"));
-  if (checkoutBtn) checkoutBtn.addEventListener("click", () => {
-    cartDrawer.classList.add("translate-x-full");
-    checkoutDrawer.classList.remove("translate-x-full");
-  });
-  if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", () => checkoutDrawer.classList.add("translate-x-full"));
-
-  // Checkout form submit
-  const checkoutForm = document.getElementById("checkoutForm");
-  const checkoutMsg = document.getElementById("checkoutMsg");
-  if (checkoutForm) {
-    checkoutForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const orderData = {
-        name: document.getElementById("custName").value,
-        email: document.getElementById("custEmail").value,
-        phone: document.getElementById("custPhone").value,
-        address: document.getElementById("custAddress").value,
-        items: cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price }))
-      };
-      const amount = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      if (amount <= 0) {
-        checkoutMsg.textContent = "⚠️ Cart is empty!";
-        return;
-      }
-
-      try {
-        const res = await fetch("/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount })
-        });
-        const order = await res.json();
-        if (!order.id) throw new Error("Order not created");
-
-        const options = {
-          key: order.key,
-          amount: order.amount,
-          currency: "INR",
-          name: "Heer Embroidery",
-          description: "Order Payment",
-          order_id: order.id,
-          handler: async function (response) {
-            const verifyRes = await fetch("/verify-order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...response, orderData })
-            });
-            const verifyJson = await verifyRes.json();
-            if (verifyJson.success) {
-              checkoutMsg.textContent = "✅ Payment successful! Thank you.";
-              cart = [];
-              renderCart();
-            } else {
-              checkoutMsg.textContent = "❌ Payment verification failed.";
-            }
-          },
-          prefill: {
-            name: orderData.name,
-            email: orderData.email,
-            contact: orderData.phone
-          },
-          theme: { color: "#e11d48" }
-        };
-
-        const rzp = new Razorpay(options);
-        rzp.open();
-      } catch (err) {
-        console.error(err);
-        checkoutMsg.textContent = "❌ Could not create order, please try again later.";
-      }
-    });
-  }
+  document.getElementById("backShopBtn").onclick = () => (window.location.href = "index.html");
 });
+document.addEventListener("partials:loaded", updateHeaderCounts);
