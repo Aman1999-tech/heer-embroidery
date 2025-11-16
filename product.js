@@ -1,67 +1,61 @@
 // =======================
-// product.js - Product Detail Page (Firestore Loading)
+// product.js - Product Detail Page (uses shared header.js)
 // =======================
-
-import {
-  getFirestore,
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-import { app } from "./firebase-config.js";
-
-const db = getFirestore(app);
 
 // Get product ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
 
+// Fallback data if backend is offline
+const fallbackProducts = [
+  { id: "1", name: "Handmade Embroidery", price: 1200, img: "public/images/embroidery1.jpg", description: "Beautiful handmade embroidery work." },
+  { id: "2", name: "Custom Bouquet", price: 800, img: "public/images/bouquet1.jpg", description: "Custom bouquets for every occasion." },
+  { id: "3", name: "Gift Box", price: 500, img: "public/images/gift1.jpg", description: "Perfect gift box for loved ones." }
+];
+
 // =======================
-// LOAD PRODUCT FROM FIRESTORE
+// LOAD PRODUCT DETAILS
 // =======================
 async function loadProduct() {
   try {
-    const ref = doc(db, "products", productId);
-    const snap = await getDoc(ref);
+    let allProducts = [...fallbackProducts];
+    const res = await fetch("/products");
+    if (res.ok) {
+      const adminProducts = await res.json();
+      adminProducts.forEach(p => {
+        if (!allProducts.find(prod => prod.id == p.id)) {
+          allProducts.push({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            category: p.category,
+            img: p.image || "public/images/placeholder.jpg",
+            description: p.description || ""
+          });
+        }
+      });
+    }
 
-    if (!snap.exists()) {
-      alert("Product not found!");
+    const product = allProducts.find(p => p.id == productId);
+    if (!product) {
+      alert("Product not found");
       window.location.href = "index.html";
       return;
     }
 
-    const product = snap.data();
-
-    document.getElementById("productImg").src = product.image;
+    // Display product data
+    document.getElementById("productImg").src = product.img;
     document.getElementById("productName").textContent = product.name;
     document.getElementById("productPrice").textContent = `₹${product.price}`;
     document.getElementById("productDesc").textContent = product.description;
 
-    // Add / Wishlist buttons
-    document.getElementById("addCartBtn").onclick = () =>
-      window.Header.addToCart({ id: productId, ...product });
+    // Button actions using global Header
+    document.getElementById("addCartBtn").onclick = () => Header.addToCart(product);
+    document.getElementById("addWishlistBtn").onclick = () => Header.addToWishlist(product);
 
-    document.getElementById("addWishlistBtn").onclick = () =>
-      window.Header.addToWishlist({ id: productId, ...product });
-
-    // Back button
-    document.getElementById("backShopBtn").addEventListener("click", () => {
-      window.location.href = "index.html";
-    });
-
-    // Lightbox
-    const lightbox = document.getElementById("lightbox");
-    const lightboxImg = document.getElementById("lightboxImg");
-
-    document.getElementById("productImg").addEventListener("click", () => {
-      lightboxImg.src = product.image;
-      lightbox.style.display = "flex";
-    });
-
-    lightbox.addEventListener("click", () => {
-      lightbox.style.display = "none";
-    });
-
+    const backShopBtn = document.getElementById("backShopBtn");
+    if (backShopBtn)
+      backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
   } catch (err) {
     console.error("Error loading product:", err);
   }
@@ -72,5 +66,5 @@ async function loadProduct() {
 // =======================
 document.addEventListener("partials:loaded", () => {
   loadProduct();
-  window.Header?.updateCounts?.();
+  Header.updateCounts();
 });
