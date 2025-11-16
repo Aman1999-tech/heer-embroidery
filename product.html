@@ -7,86 +7,62 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
   <style>
     .glass {
       background: rgba(255, 255, 255, 0.15);
       border: 1px solid rgba(255, 255, 255, 0.3);
       backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 1rem;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-      transition: all 0.25s ease-in-out;
     }
-
-    #lightbox {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    #lightbox img {
-      max-width: 90%;
-      max-height: 80%;
-      border-radius: 1rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
+    #lightbox { display:none; }
   </style>
 </head>
 
 <body class="bg-gray-100 font-sans">
 
-  <!-- Header placeholder -->
+  <!-- Header -->
   <div id="header-include"></div>
 
-  <!-- Back to Shop -->
-  <div class="max-w-6xl mx-auto p-4 flex justify-start">
-    <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
-      ← Back to Shop
-    </button>
+  <!-- Back -->
+  <div class="max-w-6xl mx-auto p-4">
+    <button id="backShopBtn" class="bg-pink-600 text-white px-4 py-2 rounded">← Back</button>
   </div>
 
-  <!-- PRODUCT DETAILS -->
+  <!-- Product Info -->
   <main class="max-w-4xl mx-auto p-6 flex flex-col md:flex-row gap-6">
     <div class="flex-1">
-      <img id="productImg" src="" alt="" class="w-full rounded-lg shadow cursor-pointer">
+      <img id="productImg" class="w-full rounded-lg shadow cursor-pointer">
     </div>
     <div class="flex-1 flex flex-col gap-4">
       <h2 id="productName" class="text-2xl font-bold"></h2>
       <p id="productPrice" class="text-pink-600 font-bold text-xl"></p>
       <p id="productDesc" class="text-gray-700"></p>
+
       <div class="flex gap-2">
-        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Add to Cart</button>
-        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded hover:bg-yellow-500 transition">♡ Wishlist</button>
+        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add to Cart</button>
+        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded">♡ Wishlist</button>
       </div>
     </div>
   </main>
 
-  <!-- Lightbox for Zoom -->
-  <div id="lightbox" class="flex">
-    <img id="lightboxImg" src="" alt="">
+  <!-- Lightbox -->
+  <div id="lightbox" class="fixed inset-0 bg-black/70 flex items-center justify-center">
+    <img id="lightboxImg" class="max-w-[90%] max-h-[80%] rounded-lg shadow">
   </div>
 
-  <!-- Footer placeholder -->
+  <!-- Footer -->
   <div id="footer-include"></div>
 
-  <!-- Inject Header/Footer + Logic -->
   <script>
-    async function injectHTML(id, file) {
+    async function loadHTML(id, file) {
       const el = document.getElementById(id);
-      const res = await fetch(file, { cache: 'no-cache' });
-      el.innerHTML = await res.text();
+      el.innerHTML = await fetch(file, { cache: "no-cache" }).then(r => r.text());
     }
 
     async function loadModule(src) {
       return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.type = 'module';
+        const s = document.createElement("script");
+        s.type = "module";
         s.src = src;
         s.onload = resolve;
         s.onerror = reject;
@@ -95,19 +71,15 @@
     }
 
     (async () => {
-      try {
-        await injectHTML('header-include', './header.html');
-        await injectHTML('footer-include', './footer.html');
-        await loadModule('./header.js');
-        await loadModule('./footer.js');
-        document.dispatchEvent(new CustomEvent('partials:loaded'));
-      } catch (err) {
-        console.error("Include failed:", err);
-      }
+      await loadHTML("header-include", "./header.html");
+      await loadHTML("footer-include", "./footer.html");
+      await loadModule("./header.js");
+      await loadModule("./footer.js");
+      document.dispatchEvent(new CustomEvent("partials:loaded"));
     })();
   </script>
 
-  <!-- Page Logic -->
-  <script src="./product.js"></script>
+  <script type="module" src="./product.js"></script>
+
 </body>
 </html>
