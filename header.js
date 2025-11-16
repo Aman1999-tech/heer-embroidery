@@ -1,5 +1,5 @@
 // =======================================
-// header.js - Shared Cart, Wishlist, Checkout + Auth Logic
+// header.js - Shared Cart, Wishlist, Checkout + Auth + Razorpay Logic
 // =======================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -13,7 +13,9 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc
+  updateDoc,
+  addDoc,
+  collection
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 (function () {
@@ -30,7 +32,7 @@ import {
   const $ = (id) => document.getElementById(id);
 
   // =======================
-  // AUTH UI
+  // AUTH UI ELEMENTS
   // =======================
   const profileBtn = $("profileBtn");
   const profileModal = $("profileModal");
@@ -45,14 +47,36 @@ import {
   const userEmail = $("userEmail");
   const userPassword = $("userPassword");
 
+  // Header buttons
+  const cartBtn = $("cartBtn");
+  const wishlistBtn = $("wishlistBtn");
+
+  // Drawers + elements
+  const cartDrawer = $("cartDrawer");
+  const wishlistDrawer = $("wishlistDrawer");
+  const checkoutDrawer = $("checkoutDrawer");
+
+  const cartItems = $("cartItems");
+  const wishlistItems = $("wishlistItems");
+  const cartTotal = $("cartTotal");
+  const checkoutBtn = $("checkoutBtn");
+  const checkoutForm = $("checkoutForm");
+  const checkoutMsg = $("checkoutMsg");
+
+  const closeCartBtns = document.querySelectorAll(".closeCart");
+  const closeWishlistBtns = document.querySelectorAll(".closeWishlist");
+  const closeCheckoutBtns = document.querySelectorAll(".closeCheckout");
+
   function showModal() {
+    if (!profileModal) return;
     profileModal.classList.remove("hidden");
   }
 
   function hideModal() {
+    if (!profileModal) return;
     profileModal.classList.add("hidden");
-    userEmail.value = "";
-    userPassword.value = "";
+    if (userEmail) userEmail.value = "";
+    if (userPassword) userPassword.value = "";
   }
 
   // =======================
@@ -113,8 +137,14 @@ import {
   }
 
   function updateHeaderCounts() {
-    $("cartCount").textContent = cart.reduce((s, i) => s + i.quantity, 0);
-    $("wishlistCount").textContent = wishlist.length;
+    const cartCountEl = $("cartCount");
+    const wishlistCountEl = $("wishlistCount");
+    if (cartCountEl) {
+      cartCountEl.textContent = cart.reduce((s, i) => s + i.quantity, 0);
+    }
+    if (wishlistCountEl) {
+      wishlistCountEl.textContent = wishlist.length;
+    }
   }
 
   function ensureLoggedIn() {
@@ -127,12 +157,38 @@ import {
   }
 
   // =======================
+  // DRAWER HELPERS
+  // =======================
+  function openCartDrawer() {
+    if (!cartDrawer) return;
+    cartDrawer.style.transform = "translateX(0)";
+  }
+  function closeCartDrawer() {
+    if (!cartDrawer) return;
+    cartDrawer.style.transform = "translateX(100%)";
+  }
+
+  function openWishlistDrawer() {
+    if (!wishlistDrawer) return;
+    wishlistDrawer.style.transform = "translateX(0)";
+  }
+  function closeWishlistDrawer() {
+    if (!wishlistDrawer) return;
+    wishlistDrawer.style.transform = "translateX(-100%)";
+  }
+
+  function openCheckoutDrawer() {
+    if (!checkoutDrawer) return;
+    checkoutDrawer.style.transform = "translateX(0)";
+  }
+  function closeCheckoutDrawer() {
+    if (!checkoutDrawer) return;
+    checkoutDrawer.style.transform = "translateX(100%)";
+  }
+
+  // =======================
   // CART FUNCTIONS
   // =======================
-  const cartItems = $("cartItems");
-  const wishlistItems = $("wishlistItems");
-  const cartTotal = $("cartTotal");
-
   function renderCart() {
     if (!cartItems) return;
 
@@ -165,20 +221,25 @@ import {
       cartItems.appendChild(row);
     });
 
-    cartTotal.textContent = "₹" + total;
+    if (cartTotal) {
+      cartTotal.textContent = "₹" + total;
+    }
+
     saveLocal();
     saveToFirestore();
     updateHeaderCounts();
   }
 
   function updateCartQty(id, type) {
-    cart = cart.map(item => {
-      if (item.id === id) {
-        if (type === "inc") item.quantity++;
-        if (type === "dec") item.quantity--;
-      }
-      return item;
-    }).filter(i => i.quantity > 0);
+    cart = cart
+      .map(item => {
+        if (item.id === id) {
+          if (type === "inc") item.quantity++;
+          if (type === "dec") item.quantity--;
+        }
+        return item;
+      })
+      .filter(i => i.quantity > 0);
 
     renderCart();
   }
@@ -195,6 +256,7 @@ import {
 
     renderWishlist();
     renderCart();
+    openCartDrawer();
   }
 
   // =======================
@@ -246,6 +308,156 @@ import {
     }
 
     renderWishlist();
+    openWishlistDrawer();
+  }
+
+  // =======================
+  // RAZORPAY HELPERS
+  // =======================
+  function getCartTotalAmount() {
+    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }
+
+  async function createRazorpayOrder(amountInPaise) {
+    const resp = await fetch("/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: amountInPaise,
+        currency: "INR"
+      })
+    });
+
+    if (!resp.ok) {
+      throw new Error("Failed to create order");
+    }
+
+    // ⚠️ Assumption:
+    // Backend returns: { key, orderId, amount, currency }
+    // Adjust here if your backend returns a slightly different JSON.
+    return await resp.json();
+  }
+
+  async function saveOrderToFirestore(orderData) {
+    try {
+      await addDoc(collection(db, "orders"), orderData);
+    } catch (e) {
+      console.error("Error saving order:", e);
+    }
+  }
+
+  async function handleCheckoutSubmit(e) {
+    e.preventDefault();
+    if (!ensureLoggedIn()) return;
+    if (!cart.length) {
+      alert("Your cart is empty.");
+      return;
+    }
+
+    if (!checkoutMsg) return;
+
+    const name = $("custName")?.value.trim();
+    const email = $("custEmail")?.value.trim();
+    const phone = $("custPhone")?.value.trim();
+    const address = $("custAddress")?.value.trim();
+
+    if (!name || !email || !phone || !address) {
+      checkoutMsg.textContent = "Please fill all details.";
+      checkoutMsg.classList.remove("text-green-600");
+      checkoutMsg.classList.add("text-red-600");
+      return;
+    }
+
+    const total = getCartTotalAmount(); // in ₹
+    if (total <= 0) {
+      checkoutMsg.textContent = "Invalid cart total.";
+      checkoutMsg.classList.remove("text-green-600");
+      checkoutMsg.classList.add("text-red-600");
+      return;
+    }
+
+    if (typeof Razorpay === "undefined") {
+      alert("Payment system not loaded. Please refresh and try again.");
+      return;
+    }
+
+    checkoutMsg.textContent = "Creating order, please wait...";
+    checkoutMsg.classList.remove("text-red-600");
+    checkoutMsg.classList.add("text-gray-600");
+
+    try {
+      const amountInPaise = total * 100;
+      const data = await createRazorpayOrder(amountInPaise);
+
+      const options = {
+        key: data.key, // from backend
+        amount: data.amount, // in paise
+        currency: data.currency || "INR",
+        name: "Heer Embroidery",
+        description: "Order Payment",
+        order_id: data.orderId,
+        prefill: {
+          name,
+          email,
+          contact: phone
+        },
+        notes: {
+          address
+        },
+        theme: {
+          color: "#ec4899"
+        },
+        handler: async function (response) {
+          checkoutMsg.textContent = "Payment successful! Saving order...";
+          checkoutMsg.classList.remove("text-red-600");
+          checkoutMsg.classList.add("text-green-600");
+
+          const orderPayload = {
+            userId: currentUser ? currentUser.uid : null,
+            customer: { name, email, phone, address },
+            cart,
+            total,
+            currency: "INR",
+            razorpay: {
+              orderId: data.orderId,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature
+            },
+            createdAt: new Date().toISOString()
+          };
+
+          await saveOrderToFirestore(orderPayload);
+
+          // Clear cart
+          cart = [];
+          saveLocal();
+          renderCart();
+
+          // Close drawers after short delay
+          setTimeout(() => {
+            closeCheckoutDrawer();
+            closeCartDrawer();
+            checkoutMsg.textContent = "";
+            checkoutForm.reset();
+          }, 1200);
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.on("payment.failed", function (resp) {
+        console.error("Payment failed:", resp.error);
+        checkoutMsg.textContent = "Payment failed. Please try again.";
+        checkoutMsg.classList.remove("text-green-600");
+        checkoutMsg.classList.add("text-red-600");
+      });
+
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      checkoutMsg.textContent = "Failed to start payment. Please try again.";
+      checkoutMsg.classList.remove("text-green-600");
+      checkoutMsg.classList.add("text-red-600");
+    }
   }
 
   // =======================
@@ -255,9 +467,9 @@ import {
     currentUser = user;
 
     if (user) {
-      userInfo.classList.remove("hidden");
-      profileContent.classList.add("hidden");
-      userName.textContent = user.email.split("@")[0];
+      if (userInfo) userInfo.classList.remove("hidden");
+      if (profileContent) profileContent.classList.add("hidden");
+      if (userName) userName.textContent = user.email.split("@")[0];
       hideModal();
 
       const ref = doc(db, "users", user.uid);
@@ -273,28 +485,56 @@ import {
       updateHeaderCounts();
 
     } else {
-      userInfo.classList.add("hidden");
-      profileContent.classList.remove("hidden");
+      if (userInfo) userInfo.classList.add("hidden");
+      if (profileContent) profileContent.classList.remove("hidden");
     }
   });
 
   // =======================
-  // INIT FUNCTION (run immediately)
-// =======================
+  // INIT FUNCTION
+  // =======================
   function initHeader() {
-    if (!profileBtn) return; // safety
+    if (profileBtn) profileBtn.onclick = showModal;
+    if (closeProfileModal) closeProfileModal.onclick = hideModal;
+    if (loginBtn) loginBtn.onclick = handleLogin;
+    if (signupBtn) signupBtn.onclick = handleSignup;
+    if (logoutBtn) logoutBtn.onclick = handleLogout;
 
-    profileBtn.onclick = showModal;
-    closeProfileModal.onclick = hideModal;
-    loginBtn.onclick = handleLogin;
-    signupBtn.onclick = handleSignup;
-    logoutBtn.onclick = handleLogout;
+    if (cartBtn) {
+      cartBtn.onclick = () => {
+        openCartDrawer();
+      };
+    }
+    if (wishlistBtn) {
+      wishlistBtn.onclick = () => {
+        openWishlistDrawer();
+      };
+    }
 
+    closeCartBtns.forEach(btn => btn.addEventListener("click", closeCartDrawer));
+    closeWishlistBtns.forEach(btn => btn.addEventListener("click", closeWishlistDrawer));
+    closeCheckoutBtns.forEach(btn => btn.addEventListener("click", closeCheckoutDrawer));
+
+    if (checkoutBtn) {
+      checkoutBtn.onclick = () => {
+        if (!cart.length) {
+          alert("Your cart is empty.");
+          return;
+        }
+        openCheckoutDrawer();
+      };
+    }
+
+    if (checkoutForm) {
+      checkoutForm.addEventListener("submit", handleCheckoutSubmit);
+    }
+
+    // initial render from local storage
     renderCart();
     renderWishlist();
     updateHeaderCounts();
 
-    // 🔔 Tell other scripts (product.js) that Header is ready
+    // 🔔 Tell other scripts (if needed) that Header is ready
     document.dispatchEvent(new Event("header:ready"));
   }
 
@@ -306,5 +546,9 @@ import {
   }
 
   // Expose global functions for other scripts
-  window.Header = { addToCart, addToWishlist };
+  window.Header = {
+    addToCart,
+    addToWishlist,
+    updateCounts: updateHeaderCounts
+  };
 })();

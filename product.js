@@ -43,19 +43,45 @@ async function loadProduct() {
       return;
     }
 
-    // Display product data
-    document.getElementById("productImg").src = product.img;
-    document.getElementById("productName").textContent = product.name;
-    document.getElementById("productPrice").textContent = `₹${product.price}`;
-    document.getElementById("productDesc").textContent = product.description;
+    const productImgEl = document.getElementById("productImg");
+    const productNameEl = document.getElementById("productName");
+    const productPriceEl = document.getElementById("productPrice");
+    const productDescEl = document.getElementById("productDesc");
+
+    productImgEl.src = product.img;
+    productNameEl.textContent = product.name;
+    productPriceEl.textContent = `₹${product.price}`;
+    productDescEl.textContent = product.description;
 
     // Button actions using global Header
-    document.getElementById("addCartBtn").onclick = () => Header.addToCart(product);
-    document.getElementById("addWishlistBtn").onclick = () => Header.addToWishlist(product);
+    document.getElementById("addCartBtn").onclick = () => {
+      if (window.Header && typeof window.Header.addToCart === "function") {
+        window.Header.addToCart(product);
+      }
+    };
+    document.getElementById("addWishlistBtn").onclick = () => {
+      if (window.Header && typeof window.Header.addToWishlist === "function") {
+        window.Header.addToWishlist(product);
+      }
+    };
 
     const backShopBtn = document.getElementById("backShopBtn");
-    if (backShopBtn)
+    if (backShopBtn) {
       backShopBtn.addEventListener("click", () => (window.location.href = "index.html"));
+    }
+
+    // Lightbox zoom
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightboxImg");
+    if (productImgEl && lightbox && lightboxImg) {
+      productImgEl.addEventListener("click", () => {
+        lightboxImg.src = product.img;
+        lightbox.style.display = "flex";
+      });
+      lightbox.addEventListener("click", () => {
+        lightbox.style.display = "none";
+      });
+    }
   } catch (err) {
     console.error("Error loading product:", err);
   }
@@ -66,5 +92,7 @@ async function loadProduct() {
 // =======================
 document.addEventListener("partials:loaded", () => {
   loadProduct();
-  Header.updateCounts();
+  if (window.Header && typeof window.Header.updateCounts === "function") {
+    window.Header.updateCounts();
+  }
 });

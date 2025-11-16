@@ -94,5 +94,7 @@ async function loadProducts() {
 // =======================
 document.addEventListener("partials:loaded", () => {
   loadProducts();
-  Header.updateCounts(); // sync badge counts
+  if (window.Header && typeof window.Header.updateCounts === "function") {
+    window.Header.updateCounts(); // sync badge counts
+  }
 });

@@ -6,24 +6,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
-    .glass { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-radius: 1rem; box-shadow: 0 4px 30px rgba(0,0,0,0.1); transition: all .25s; }
+    .glass {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 1rem;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+      transition: all .25s;
+    }
     button:hover, .social-btn:hover { transform: scale(1.08); }
-    .social-btn { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%;
-      background:rgba(255,255,255,.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      color:#E4405F; font-size:20px; box-shadow:0 2px 6px rgba(0,0,0,.2); transition: all .25s; }
-    .filter-btns-container { overflow-x:auto; white-space:nowrap; scrollbar-width:none; -ms-overflow-style:none; justify-content:flex-start; padding-bottom:.5rem; }
+    .social-btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      background:rgba(255,255,255,.25);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color:#E4405F;
+      font-size:20px;
+      box-shadow:0 2px 6px rgba(0,0,0,.2);
+      transition: all .25s;
+    }
+    .filter-btns-container {
+      overflow-x:auto;
+      white-space:nowrap;
+      scrollbar-width:none;
+      -ms-overflow-style:none;
+      justify-content:flex-start;
+      padding-bottom:.5rem;
+    }
     .filter-btns-container::-webkit-scrollbar { display:none; }
     .filter-btn { display:inline-block; margin-right:.5rem; white-space:nowrap; }
+
     @media (max-width: 640px) {
-      #productGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:1rem; }
+      #productGrid {
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:1rem;
+        padding:1rem;
+      }
       header h1 { font-size:1.1rem; }
       header button { font-size:.9rem; }
       .glass { border-radius:.75rem; }
     }
-    @media (min-width: 641px) { #productGrid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (min-width: 641px) {
+      #productGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
   </style>
 </head>
 
@@ -37,44 +72,6 @@
 
   <!-- Product Grid -->
   <main id="productGrid" class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-6"></main>
-
-  <!-- Cart Drawer -->
-  <div id="cartDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Your Cart</h2>
-      <button class="closeCart">✖</button>
-    </div>
-    <div id="cartItems" class="flex-1 overflow-y-auto"></div>
-    <div class="mt-4">
-      <p>Total: <span id="cartTotal" class="font-bold">₹0</span></p>
-      <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
-    </div>
-  </div>
-
-  <!-- Wishlist Drawer -->
-  <div id="wishlistDrawer" class="fixed top-0 left-0 w-80 h-full glass transform -translate-x-full transition p-4 flex flex-col z-50">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-bold">Your Wishlist</h2>
-      <button class="closeWishlist">✖</button>
-    </div>
-    <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
-  </div>
-
-  <!-- Checkout Drawer -->
-   <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition z-50">
-    <div class="p-4 flex justify-between items-center border-b bg-pink-600 text-white rounded-t-xl">
-      <h2 class="font-bold text-lg">Checkout</h2>
-      <button class="closeCheckout text-white">✕</button>
-    </div>
-    <form id="checkoutForm" class="p-4 space-y-3">
-      <input type="text" id="custName" placeholder="Full Name" class="w-full border p-2 rounded" required>
-      <input type="email" id="custEmail" placeholder="Email" class="w-full border p-2 rounded" required>
-      <input type="tel" id="custPhone" placeholder="Phone" class="w-full border p-2 rounded" required>
-      <textarea id="custAddress" placeholder="Address" class="w-full border p-2 rounded" required></textarea>
-      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full hover:bg-pink-700 transition">Pay Now</button>
-      <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
-    </form>
-  </div>
 
   <!-- Contact Section -->
   <section id="contact" class="max-w-7xl mx-auto px-4 py-12">
@@ -99,9 +96,6 @@
   <!-- Footer placeholder -->
   <div id="footer-include"></div>
 
-  <!-- Razorpay -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
   <!-- Tiny loader to include header.html and footer.html, then load header.js/footer.js -->
   <script>
     (async function () {
@@ -110,21 +104,24 @@
         const html = await fetch(file, { cache: 'no-cache' }).then(r => r.text());
         el.innerHTML = html;
       }
+      async function loadModule(src) {
+        return new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.type = 'module';
+          s.src = src;
+          s.onload = res;
+          s.onerror = rej;
+          document.body.appendChild(s);
+        });
+      }
+
       try {
         await inject('header-include', './header.html');
         await inject('footer-include', './footer.html');
 
         // Load behavior scripts AFTER injecting HTML
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = './header.js'; s.onload = res; s.onerror = rej;
-          document.body.appendChild(s);
-        });
-        await new Promise((res, rej) => {
-          const s = document.createElement('script');
-          s.src = './footer.js'; s.onload = res; s.onerror = rej;
-          document.body.appendChild(s);
-        });
+        await loadModule('./header.js');
+        await loadModule('./footer.js');
 
         document.dispatchEvent(new CustomEvent('partials:loaded'));
       } catch (e) {
