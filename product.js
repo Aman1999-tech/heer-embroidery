@@ -17,11 +17,11 @@ async function loadProduct() {
   try {
     let allProducts = [...fallbackProducts];
 
-    // Load from server
+    // Fetch from backend
     const res = await fetch("/products");
     if (res.ok) {
-      const fromServer = await res.json();
-      fromServer.forEach(p => {
+      const server = await res.json();
+      server.forEach(p => {
         if (!allProducts.find(a => a.id == p.id)) {
           allProducts.push({
             id: p.id,
@@ -37,34 +37,43 @@ async function loadProduct() {
     // Find product
     const product = allProducts.find(p => p.id == productId);
     if (!product) {
-      alert("Product not found!");
-      window.location.href = "index.html";
+      alert("Product not found");
+      location.href = "index.html";
       return;
     }
 
-    // Fill HTML
+    // Set HTML
     document.getElementById("productImg").src = product.img;
     document.getElementById("productName").textContent = product.name;
     document.getElementById("productPrice").textContent = `₹${product.price}`;
     document.getElementById("productDesc").textContent = product.description;
 
-    // BACK BUTTON
-    document.getElementById("backShopBtn").onclick = () => {
-      window.location.href = "index.html";
-    };
+    document.getElementById("backShopBtn").onclick = () => location.href = "index.html";
 
-    // ============================
-    // WAIT UNTIL HEADER LOADED!
-    // ============================
-    document.addEventListener("header:ready", () => {
-      document.getElementById("addCartBtn").onclick = () => Header.addToCart(product);
-      document.getElementById("addWishlistBtn").onclick = () => Header.addToWishlist(product);
-    });
+    // =============== FIXED COMPLETE WORKING ADD TO CART / WISHLIST =====================
+
+    function attachButtons() {
+      if (window.Header) {
+        document.getElementById("addCartBtn").onclick = () => Header.addToCart(product);
+        document.getElementById("addWishlistBtn").onclick = () => Header.addToWishlist(product);
+        console.log("Buttons attached after header ready");
+      }
+    }
+
+    // Method 1: If header.js already loaded → attach immediately
+    if (window.Header) {
+      attachButtons();
+    } else {
+      console.log("Waiting for header...");
+    }
+
+    // Method 2: If header loads late → attach on event
+    document.addEventListener("header:ready", attachButtons);
 
   } catch (err) {
     console.error("Product Load Error:", err);
   }
 }
 
-// Wait for header/footer load
+// Run after header/footer injected
 document.addEventListener("partials:loaded", loadProduct);
