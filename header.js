@@ -97,7 +97,7 @@ import {
   }
 
   // =======================
-  // CART / WISHLIST STORAGE
+  // SAVE FUNCTIONS
   // =======================
   function saveLocal() {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -107,7 +107,9 @@ import {
   async function saveToFirestore() {
     if (!currentUser) return;
     const ref = doc(db, "users", currentUser.uid);
-    await updateDoc(ref, { cart, wishlist });
+    await updateDoc(ref, { cart, wishlist }).catch(() => {
+      // ignore if doc doesn't exist yet
+    });
   }
 
   function updateHeaderCounts() {
@@ -188,6 +190,7 @@ import {
     if (item) item.quantity++;
     else cart.push({ ...product, quantity: 1 });
 
+    // Remove from wishlist if present
     wishlist = wishlist.filter(i => i.id !== product.id);
 
     renderWishlist();
@@ -246,7 +249,7 @@ import {
   }
 
   // =======================
-  // AUTH STATE HANDLER
+  // AUTH STATE
   // =======================
   onAuthStateChanged(auth, async (user) => {
     currentUser = user;
@@ -257,7 +260,6 @@ import {
       userName.textContent = user.email.split("@")[0];
       hideModal();
 
-      // Load user data
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
 
@@ -277,9 +279,11 @@ import {
   });
 
   // =======================
-  // EVENT LISTENERS
-  // =======================
-  document.addEventListener("DOMContentLoaded", () => {
+  // INIT FUNCTION (run immediately)
+// =======================
+  function initHeader() {
+    if (!profileBtn) return; // safety
+
     profileBtn.onclick = showModal;
     closeProfileModal.onclick = hideModal;
     loginBtn.onclick = handleLogin;
@@ -289,8 +293,18 @@ import {
     renderCart();
     renderWishlist();
     updateHeaderCounts();
-  });
 
-  // Expose global functions
+    // 🔔 Tell other scripts (product.js) that Header is ready
+    document.dispatchEvent(new Event("header:ready"));
+  }
+
+  // Run init now (or after DOM ready if needed)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initHeader);
+  } else {
+    initHeader();
+  }
+
+  // Expose global functions for other scripts
   window.Header = { addToCart, addToWishlist };
 })();
