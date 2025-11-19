@@ -17,15 +17,12 @@
       box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
       transition: all 0.25s ease-in-out;
     }
-
     #lightbox {
       display: none;
       position: fixed;
       z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
       justify-content: center;
       align-items: center;
@@ -38,11 +35,24 @@
     }
   </style>
 </head>
-
 <body class="bg-gray-100 font-sans">
 
-  <!-- Header placeholder -->
-  <div id="header-include"></div>
+  <!-- Header -->
+  <header class="glass bg-pink-600/80 text-white p-4 flex justify-between items-center shadow-md">
+    <h1 class="text-xl font-bold">Heer Embroidery</h1>
+    <div class="flex gap-4 items-center">
+      <button id="wishlistBtn" class="relative">❤️ Wishlist
+        <span id="wishlistCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
+      </button>
+      <button id="cartBtn" class="relative">🛒 Cart
+        <span id="cartCount" class="absolute -top-2 -right-3 bg-yellow-300 text-black rounded-full px-2 text-xs">0</span>
+      </button>
+      <!-- ✅ Profile Button Added -->
+      <button id="profileBtn" class="relative flex items-center gap-1">
+        <i class="fa-solid fa-user"></i> <span>Profile</span>
+      </button>
+    </div>
+  </header>
 
   <!-- Back to Shop -->
   <div class="max-w-6xl mx-auto p-4 flex justify-start">
@@ -61,8 +71,8 @@
       <p id="productPrice" class="text-pink-600 font-bold text-xl"></p>
       <p id="productDesc" class="text-gray-700"></p>
       <div class="flex gap-2">
-        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">Add to Cart</button>
-        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded hover:bg-yellow-500 transition">♡ Wishlist</button>
+        <button id="addCartBtn" class="bg-green-600 text-white px-4 py-2 rounded">Add to Cart</button>
+        <button id="addWishlistBtn" class="bg-yellow-400 text-black px-4 py-2 rounded">♡ Wishlist</button>
       </div>
     </div>
   </main>
@@ -81,22 +91,22 @@
     <div id="cartItems" class="flex-1 overflow-y-auto"></div>
     <div class="mt-4">
       <p>Total: <span id="cartTotal" class="font-bold">₹0</span></p>
-      <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">Checkout</button>
+      <button id="checkoutBtn" class="mt-2 w-full bg-green-600 text-white py-2 rounded">Checkout</button>
     </div>
   </div>
 
-  <!-- ✅ Unified Checkout Drawer (same as index.html) -->
-  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition z-50">
-    <div class="p-4 flex justify-between items-center border-b bg-pink-600 text-white rounded-t-xl">
+  <!-- Checkout Drawer -->
+  <div id="checkoutDrawer" class="fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform translate-x-full transition">
+    <div class="p-4 flex justify-between items-center border-b">
       <h2 class="font-bold text-lg">Checkout</h2>
-      <button class="closeCheckout text-white">✕</button>
+      <button class="closeCheckout text-gray-500">✕</button>
     </div>
     <form id="checkoutForm" class="p-4 space-y-3">
-      <input type="text" id="custName" placeholder="Full Name" class="w-full border p-2 rounded" required>
-      <input type="email" id="custEmail" placeholder="Email" class="w-full border p-2 rounded" required>
-      <input type="tel" id="custPhone" placeholder="Phone" class="w-full border p-2 rounded" required>
-      <textarea id="custAddress" placeholder="Address" class="w-full border p-2 rounded" required></textarea>
-      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full hover:bg-pink-700 transition">Pay Now</button>
+      <input type="text" id="custName" placeholder="Your Name" class="w-full border p-2 rounded" required>
+      <input type="email" id="custEmail" placeholder="Your Email" class="w-full border p-2 rounded" required>
+      <input type="tel" id="custPhone" placeholder="Your Phone" class="w-full border p-2 rounded" required>
+      <textarea id="custAddress" placeholder="Your Address" class="w-full border p-2 rounded" required></textarea>
+      <button type="submit" class="bg-pink-600 text-white px-4 py-2 rounded w-full">Pay with Razorpay</button>
       <p id="checkoutMsg" class="text-center text-sm mt-2"></p>
     </form>
   </div>
@@ -110,41 +120,49 @@
     <div id="wishlistItems" class="flex-1 overflow-y-auto"></div>
   </div>
 
-  <!-- Footer placeholder -->
-  <div id="footer-include"></div>
+  <!-- ✅ Profile Drawer Added -->
+  <div id="profileDrawer" class="fixed top-0 right-0 w-80 h-full glass transform translate-x-full transition p-4 flex flex-col z-50">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Your Profile</h2>
+      <button id="closeProfile" class="text-gray-600">✖</button>
+    </div>
+    <div id="profileContent" class="flex-1 overflow-y-auto">
+      <!-- Login form (shown when not logged in) -->
+      <div id="loginForm">
+        <input type="text" id="loginName" placeholder="Enter Name" class="w-full border p-2 rounded mb-2">
+        <input type="email" id="loginEmail" placeholder="Enter Email" class="w-full border p-2 rounded mb-2">
+        <input type="tel" id="loginPhone" placeholder="Enter Phone" class="w-full border p-2 rounded mb-4">
+        <button id="saveProfile" class="w-full bg-pink-600 text-white py-2 rounded">Save Profile</button>
+      </div>
+      <!-- Profile info (shown after login) -->
+      <div id="userProfile" class="hidden">
+        <p><strong>Name:</strong> <span id="userName"></span></p>
+        <p><strong>Email:</strong> <span id="userEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="userPhone"></span></p>
+        <button id="logoutBtn" class="mt-4 bg-red-500 text-white px-4 py-2 rounded w-full">Logout</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Inject Header/Footer + Logic -->
-  <script>
-    async function injectHTML(id, file) {
-      const el = document.getElementById(id);
-      const res = await fetch(file, { cache: 'no-cache' });
-      el.innerHTML = await res.text();
-    }
+  <!-- Footer -->
+  <footer class="glass text-center py-6 mt-10 text-gray-700 rounded-t-2xl shadow-inner">
+    <p class="mb-3">
+      © 2024 <span class="font-bold text-pink-700">Heer Embroidery</span>. All Rights Reserved.
+    </p>
+    <div class="flex flex-wrap justify-center gap-4 text-sm mb-4">
+      <a href="privacy.html" target="_blank" class="hover:text-pink-600 hover:underline">Privacy Policy</a>
+      <a href="terms.html" target="_blank" class="hover:text-pink-600 hover:underline">Terms & Conditions</a>
+      <a href="shipping.html" target="_blank" class="hover:text-pink-600 hover:underline">Shipping Policy</a>
+      <a href="refund.html" target="_blank" class="hover:text-pink-600 hover:underline">Refund & Cancellation</a>
+      <a href="#contact" class="hover:text-pink-600 hover:underline">Contact Us</a>
+    </div>
+    <div class="flex justify-center gap-4">
+      <a href="https://www.instagram.com/embroidery_heer2" target="_blank" class="social-btn" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
+    </div>
+  </footer>
 
-    async function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.onload = resolve;
-        s.onerror = reject;
-        document.body.appendChild(s);
-      });
-    }
-
-    (async () => {
-      try {
-        await injectHTML('header-include', './header.html');
-        await injectHTML('footer-include', './footer.html');
-        await loadScript('./header.js');
-        await loadScript('./footer.js');
-        document.dispatchEvent(new CustomEvent('partials:loaded'));
-      } catch (err) {
-        console.error("Include failed:", err);
-      }
-    })();
-  </script>
-
-  <!-- Page Logic -->
-  <script src="./product.js"></script>
+  <script type="module" src="product.js"></script>
 </body>
 </html>
