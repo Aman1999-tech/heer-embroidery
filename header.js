@@ -1,256 +1,252 @@
-// =======================================
-// header.js - Shared Cart, Wishlist, Checkout + Auth Logic
-// =======================================
+// header.js (FULL AMAZON STYLE)
 import { auth, db } from "./firebase-config.js";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 import {
-  doc,
-  setDoc,
-  getDoc
+  doc, setDoc, getDoc, addDoc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 (function () {
-  if (window.__HEADER_INIT__) return;
-  window.__HEADER_INIT__ = true;
+if (window.__HDR_LOADED__) return;
+window.__HDR_LOADED__ = true;
 
-  // =======================
-  // GLOBAL STATE
-  // =======================
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
-  let currentUser = null;
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+let wishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+let currentUser = null;
 
-  const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-  // =======================
-  // AUTH UI
-  // =======================
-  const profileBtn = $("profileBtn");
-  const profileModal = $("profileModal");
-  const closeProfileModal = $("closeProfileModal");
-  const loginBtn = $("loginBtn");
-  const signupBtn = $("signupBtn");
-  const logoutBtn = $("logoutBtn");
-  const userInfo = $("userInfo");
-  const profileContent = $("profileContent");
-  const userName = $("userName");
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(cart));
+  syncUser();
+}
+function saveWishlist() {
+  localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  syncUser();
+}
 
-  const userEmail = $("userEmail");
-  const userPassword = $("userPassword");
+async function syncUser() {
+  if (!currentUser) return;
+  await setDoc(doc(db,"users",currentUser.uid),{
+    cart, wishlist
+  },{merge:true});
+}
 
-  function showModal() {
-    profileModal.classList.remove("hidden");
-  }
+function ensureLogin() {
+  if (!currentUser) { openProfile(); alert("Please login first."); return false; }
+  return true;
+}
+// CART RENDER
+function renderCart() {
+  const box = $("cartItems"); if (!box) return;
+  box.innerHTML = "";
+  let total = 0;
 
-  function hideModal() {
-    profileModal.classList.add("hidden");
-    userEmail.value = "";
-    userPassword.value = "";
-  }
+  cart.forEach(item=>{
+    const q = item.quantity || 1;
+    total += item.price*q;
 
-  // =======================
-  // LOGIN / SIGNUP
-  // =======================
-  async function handleSignup() {
-    const email = userEmail.value.trim();
-    const password = userPassword.value.trim();
-    if (!email || !password) return alert("Please fill both fields.");
-    try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCred.user.uid;
-      await setDoc(doc(db, "users", uid), {
-        email,
-        name: email.split("@")[0],
-        cart: [],
-        wishlist: []
+    const div=document.createElement("div");
+    div.className="border-b pb-2 mb-2 flex gap-2";
+
+    div.innerHTML=`
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded">
+      <div class="flex-1">
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-gray-600 text-sm">₹${item.price} x ${q} = ₹${item.price*q}</p>
+        <button class="text-red-600 text-sm underline removeBtn">Delete</button>
+      </div>
+      <div class="flex flex-col items-center">
+        <button class="bg-gray-300 px-2 increase">+</button>
+        <span>${q}</span>
+        <button class="bg-gray-300 px-2 decrease">-</button>
+      </div>
+    `;
+
+    div.querySelector(".increase").onclick = ()=>updateQty(item.id,"+");
+    div.querySelector(".decrease").onclick = ()=>updateQty(item.id,"-");
+    div.querySelector(".removeBtn").onclick = ()=>{
+      cart = cart.filter(c=>c.id!==item.id);
+      renderCart();
+    };
+
+    box.appendChild(div);
+  });
+
+  $("cartTotal").textContent = `₹${total}`;
+  saveCart();
+  updateCounts();
+}
+
+function updateQty(id,mode){
+  cart = cart.map(item=>{
+    if(item.id===id){
+      item.quantity = (item.quantity||1) + (mode==="+"?1:-1);
+    }
+    return item;
+  }).filter(i=>(i.quantity||0)>0);
+
+  renderCart();
+}
+
+// WISHLIST
+function renderWishlist() {
+  const box = $("wishlistItems"); if (!box) return;
+  box.innerHTML = "";
+
+  wishlist.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="border-b pb-2 mb-2 flex gap-2";
+
+    div.innerHTML=`
+      <img src="${item.img}" class="w-16 h-16 object-cover rounded">
+      <div class="flex-1">
+        <p class="font-semibold">${item.name}</p>
+        <p class="text-gray-600">₹${item.price}</p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <button class="bg-green-600 text-white px-2 rounded move">Move</button>
+        <button class="bg-red-600 text-white px-2 rounded del">Remove</button>
+      </div>
+    `;
+
+    div.querySelector(".move").onclick = ()=>{
+      addToCart(item);
+      wishlist = wishlist.filter(w=>w.id!==item.id);
+      renderWishlist();
+    };
+    div.querySelector(".del").onclick = ()=>{
+      wishlist = wishlist.filter(w=>w.id!==item.id);
+      renderWishlist();
+    };
+
+    box.appendChild(div);
+  });
+
+  saveWishlist();
+  updateCounts();
+}
+
+// ADD FUNCTIONS
+function addToCart(p){
+  if(!ensureLogin())return;
+  const exist=cart.find(i=>i.id===p.id);
+  if(exist) exist.quantity++; else cart.push({...p,quantity:1});
+  wishlist = wishlist.filter(w=>w.id!==p.id);
+  renderCart(); renderWishlist();
+}
+function addToWishlist(p){
+  if(!ensureLogin())return;
+  if(!wishlist.find(w=>w.id===p.id)) wishlist.push(p);
+  renderWishlist();
+}
+
+window.Header = { addToCart, addToWishlist, updateCounts };
+
+function updateCounts(){
+  $("cartCount").textContent = cart.reduce((a,b)=>a+(b.quantity||1),0);
+  $("wishlistCount").textContent = wishlist.length;
+}
+
+// DRAWERS
+const openCart=()=>$("cartDrawer").classList.remove("translate-x-full");
+const closeCart=()=>$("cartDrawer").classList.add("translate-x-full");
+const openWish=()=>$("wishlistDrawer").classList.remove("-translate-x-full");
+const closeWish=()=>$("wishlistDrawer").classList.add("-translate-x-full");
+const openCheckout=()=>$("checkoutDrawer").classList.remove("translate-x-full");
+const closeCheckout=()=>$("checkoutDrawer").classList.add("translate-x-full");
+const openProfile=()=>$("profileModal").classList.remove("hidden");
+const closeProfile=()=>$("profileModal").classList.add("hidden");
+// CHECKOUT
+$("checkoutBtn")?.addEventListener("click",()=>{
+  if(!ensureLogin())return;
+  if(!cart.length) return alert("Cart empty");
+  openCheckout();
+});
+
+$("checkoutForm")?.addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const name=$("custName").value.trim();
+  const email=$("custEmail").value.trim();
+  const phone=$("custPhone").value.trim();
+  const address=$("custAddress").value.trim();
+
+  const amount = cart.reduce((s,i)=>s+i.price*(i.quantity||1),0);
+
+  const options = {
+    key: window.RAZORPAY_KEY_ID,   // Injected by backend
+    amount: amount*100,
+    currency:"INR",
+    name:"Heer Embroidery",
+    handler: async (res)=>{
+      await addDoc(collection(db,"orders"),{
+        user: currentUser.uid,
+        name,email,phone,address,
+        items:cart,
+        amount,
+        paymentId:res.razorpay_payment_id,
+        createdAt: serverTimestamp()
       });
-      alert("Account created successfully!");
-    } catch (err) {
-      alert(err.message);
+
+      cart=[];
+      renderCart();
+      closeCheckout();
+      alert("Order placed!");
+    },
+    prefill:{name,email,contact:phone}
+  };
+
+  new Razorpay(options).open();
+});
+
+// LOGIN / SIGNUP
+$("profileBtn").onclick=openProfile;
+$("closeProfileModal").onclick=closeProfile;
+$("loginBtn").onclick=async()=>{
+  let e=$("userEmail").value.trim(), p=$("userPassword").value.trim();
+  await signInWithEmailAndPassword(auth,e,p).catch(err=>alert(err.message));
+};
+$("signupBtn").onclick=async()=>{
+  let e=$("userEmail").value.trim(), p=$("userPassword").value.trim();
+  let u=await createUserWithEmailAndPassword(auth,e,p).catch(err=>alert(err.message));
+  if(!u)return;
+  await setDoc(doc(db,"users",u.user.uid),{
+    email:e,createdAt:serverTimestamp(),cart:[],wishlist:[]
+  });
+  alert("Account created!");
+};
+$("logoutBtn").onclick=()=>signOut(auth);
+
+// LOAD USER & DATA
+onAuthStateChanged(auth, async user=>{
+  currentUser=user;
+  if(user){
+    const snap=await getDoc(doc(db,"users",user.uid));
+    if(snap.exists()){
+      cart=snap.data().cart||[];
+      wishlist=snap.data().wishlist||[];
     }
+    $("userInfo").classList.remove("hidden");
+    $("profileContent").classList.add("hidden");
+    $("userName").textContent=user.email.split("@")[0];
+  } else {
+    $("userInfo").classList.add("hidden");
+    $("profileContent").classList.remove("hidden");
   }
 
-  async function handleLogin() {
-    const email = userEmail.value.trim();
-    const password = userPassword.value.trim();
-    if (!email || !password) return alert("Please fill both fields.");
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      alert(err.message);
-    }
-  }
+  renderCart(); renderWishlist(); updateCounts();
+});
 
-  async function handleLogout() {
-    await signOut(auth);
-  }
-
-  // =======================
-  // CART / WISHLIST (as before)
-  // =======================
-  const cartDrawer = $("cartDrawer");
-  const wishlistDrawer = $("wishlistDrawer");
-  const checkoutDrawer = $("checkoutDrawer");
-  const cartItems = $("cartItems");
-  const wishlistItems = $("wishlistItems");
-  const cartTotal = $("cartTotal");
-
-  function saveCart() {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }
-  function saveWishlist() {
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
-  }
-
-  function updateHeaderCounts() {
-    const cartQty = cart.reduce((sum, i) => sum + i.quantity, 0);
-    const wishQty = wishlist.length;
-    $("cartCount").textContent = cartQty;
-    $("wishlistCount").textContent = wishQty;
-  }
-
-  function ensureLoggedIn() {
-    if (!currentUser) {
-      showModal();
-      alert("Please log in or create a profile first.");
-      return false;
-    }
-    return true;
-  }
-
-  function renderCart() {
-    if (!cartItems) return;
-    cartItems.innerHTML = "";
-    let total = 0;
-
-    cart.forEach(item => {
-      total += item.price * item.quantity;
-      const div = document.createElement("div");
-      div.className = "flex justify-between items-center mb-3 border-b pb-2";
-      div.innerHTML = `
-        <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
-        <div class="flex-1 ml-2">
-          <p class="font-semibold">${item.name}</p>
-          <p class="text-sm text-gray-600">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</p>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <button class="bg-gray-300 px-2 rounded increase">+</button>
-          <span>${item.quantity}</span>
-          <button class="bg-gray-300 px-2 rounded decrease">-</button>
-        </div>
-      `;
-      div.querySelector(".increase").onclick = () => updateCartQuantity(item.id, "increase");
-      div.querySelector(".decrease").onclick = () => updateCartQuantity(item.id, "decrease");
-      cartItems.appendChild(div);
-    });
-
-    cartTotal.textContent = `₹${total}`;
-    saveCart();
-    updateHeaderCounts();
-  }
-
-  function addToCart(product) {
-    if (!ensureLoggedIn()) return;
-    const existing = cart.find(i => i.id === product.id);
-    if (existing) existing.quantity++;
-    else cart.push({ ...product, quantity: 1 });
-    wishlist = wishlist.filter(i => i.id !== product.id);
-    saveWishlist();
-    renderWishlist();
-    renderCart();
-  }
-
-  function updateCartQuantity(id, action) {
-    cart = cart.map(item => {
-      if (item.id === id) {
-        if (action === "increase") item.quantity++;
-        if (action === "decrease") item.quantity--;
-      }
-      return item;
-    }).filter(i => i.quantity > 0);
-    renderCart();
-  }
-
-  function renderWishlist() {
-    if (!wishlistItems) return;
-    wishlistItems.innerHTML = "";
-    wishlist.forEach(item => {
-      const div = document.createElement("div");
-      div.className = "flex justify-between items-center mb-3 border-b pb-2";
-      div.innerHTML = `
-        <img src="${item.img}" class="w-16 h-16 object-cover rounded mr-2">
-        <div class="flex-1 ml-2">
-          <p class="font-semibold">${item.name}</p>
-          <p class="text-sm text-gray-600">₹${item.price}</p>
-        </div>
-        <div class="flex flex-col gap-1">
-          <button class="bg-green-600 text-white px-2 rounded moveCart">Move to Cart</button>
-          <button class="bg-red-500 text-white px-2 rounded removeWishlist">Remove</button>
-        </div>
-      `;
-      div.querySelector(".moveCart").onclick = () => addToCart(item);
-      div.querySelector(".removeWishlist").onclick = () => removeFromWishlist(item.id);
-      wishlistItems.appendChild(div);
-    });
-    saveWishlist();
-    updateHeaderCounts();
-  }
-
-  function addToWishlist(product) {
-    if (!ensureLoggedIn()) return;
-    if (!wishlist.find(i => i.id === product.id)) wishlist.push(product);
-    renderWishlist();
-  }
-
-  function removeFromWishlist(id) {
-    wishlist = wishlist.filter(i => i.id !== id);
-    renderWishlist();
-  }
-
-  // =======================
-  // INIT & AUTH STATE
-  // =======================
-  function init() {
-    profileBtn.onclick = showModal;
-    closeProfileModal.onclick = hideModal;
-    loginBtn.onclick = handleLogin;
-    signupBtn.onclick = handleSignup;
-    logoutBtn.onclick = handleLogout;
-
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      if (user) {
-        userInfo.classList.remove("hidden");
-        profileContent.classList.add("hidden");
-        userName.textContent = user.email.split("@")[0];
-        hideModal();
-        // Load user data from Firestore
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          cart = data.cart || [];
-          wishlist = data.wishlist || [];
-          renderCart();
-          renderWishlist();
-        }
-      } else {
-        userInfo.classList.add("hidden");
-        profileContent.classList.remove("hidden");
-      }
-    });
-
-    renderCart();
-    renderWishlist();
-    updateHeaderCounts();
-  }
-
-  document.addEventListener("DOMContentLoaded", init);
-
-  window.Header = { addToCart, addToWishlist };
+// BUTTON BINDINGS
+document.addEventListener("DOMContentLoaded",()=>{
+  $("cartBtn").onclick=openCart;
+  $("wishlistBtn").onclick=openWish;
+  document.querySelectorAll(".closeCart").forEach(b=>b.onclick=closeCart);
+  document.querySelectorAll(".closeWishlist").forEach(b=>b.onclick=closeWish);
+  document.querySelectorAll(".closeCheckout").forEach(b=>b.onclick=closeCheckout);
+});
 })();
